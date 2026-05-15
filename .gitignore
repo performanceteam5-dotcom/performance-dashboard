@@ -5,3 +5,5 @@ __pycache__/
 *.parquet
 outputs/
 .pytest_cache/
+node_modules/
+claude-code-promo/
