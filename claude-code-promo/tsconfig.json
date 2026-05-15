@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "esnext"],
+    "module": "commonjs",
+    "target": "es2022",
+    "jsx": "react",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*.tsx", "src/**/*.ts"]
+}

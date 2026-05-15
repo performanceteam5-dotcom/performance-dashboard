@@ -1,0 +1,24 @@
+{
+  "name": "claude-code-promo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "remotion studio",
+    "render": "remotion render ClaudeCodePromo out/promo.mp4"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@remotion/cli": "^4.0.461",
+    "@remotion/media": "^4.0.461",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "remotion": "^4.0.461",
+    "typescript": "^6.0.3"
+  }
+}

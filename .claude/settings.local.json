@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead\\('C:\\\\Users\\\\MADUP\\\\Downloads\\\\claude-config-pack-marketer-windows.zip'\\); $zip.Entries | Select-Object FullName, Length; $zip.Dispose\\(\\))",
+      "Bash(claude --version)"
+    ]
+  }
+}
