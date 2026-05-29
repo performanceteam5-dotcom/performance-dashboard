@@ -10,7 +10,7 @@ from rd_loader import (
 from comment_generator import build_active_comment, format_won, format_cpu
 
 
-def render(full_df: pd.DataFrame):
+def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     ac_df = full_df[full_df[COL_PART] == PART_ACTIVE_CUS].copy()
     if ac_df.empty:
         st.info("활성고객 데이터가 없습니다.")
@@ -76,9 +76,12 @@ def render(full_df: pd.DataFrame):
 
     if generate or st.session_state.get('active_comment'):
         if generate:
-            month_df = ac_df[
-                (ac_df[COL_DATE].dt.year  == target_date.year) &
-                (ac_df[COL_DATE].dt.month == target_date.month)
+            base_df  = raw_df if raw_df is not None else full_df
+            raw_ac   = base_df[base_df[COL_PART] == PART_ACTIVE_CUS]
+            month_df = raw_ac[
+                (raw_ac[COL_DATE].dt.year  == target_date.year) &
+                (raw_ac[COL_DATE].dt.month == target_date.month) &
+                (raw_ac[COL_DATE].dt.date  <= target_date.date())
             ]
             st.session_state['active_comment'] = build_active_comment(
                 day_df, target_date, month_df, COL_DETAIL

@@ -39,7 +39,7 @@ def _render_kpi_cards(kpi: dict, prev_kpi: dict | None):
         col.metric(label, display, delta_label(pct))
 
 
-def render(full_df: pd.DataFrame):
+def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     mt_df = full_df[full_df[COL_PART] == PART_MUTANDARD].copy()
     if mt_df.empty:
         st.info("무탠다드유입 데이터가 없습니다.")
@@ -51,9 +51,14 @@ def render(full_df: pd.DataFrame):
 
     day_df  = mt_df[mt_df[COL_DATE] == target_date]
     prev_df = mt_df[mt_df[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
-    month_df = mt_df[
-        (mt_df[COL_DATE].dt.year  == target_date.year) &
-        (mt_df[COL_DATE].dt.month == target_date.month)
+
+    # 월 누적: 날짜 필터 미적용 원본 기준 당월 1일~target_date
+    base_df  = raw_df if raw_df is not None else full_df
+    raw_mt   = base_df[base_df[COL_PART] == PART_MUTANDARD]
+    month_df = raw_mt[
+        (raw_mt[COL_DATE].dt.year  == target_date.year) &
+        (raw_mt[COL_DATE].dt.month == target_date.month) &
+        (raw_mt[COL_DATE].dt.date  <= target_date.date())
     ]
 
     st.markdown(

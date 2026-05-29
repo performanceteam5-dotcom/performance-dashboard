@@ -67,10 +67,10 @@ tab_active, tab_churn, tab_youth, tab_mt, tab_beauty, tab_foot = st.tabs([
 ])
 
 with tab_active:
-    active_customer.render(fdf)
+    active_customer.render(fdf, df)
 
 with tab_mt:
-    mutandard.render(fdf)
+    mutandard.render(fdf, df)
 
 for tab, name in [
     (tab_churn,  "이탈고객"),
