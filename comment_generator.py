@@ -9,8 +9,9 @@ SEGMENT_ORDER = ['무탠다드맨', '무탠다드우먼', '무탠다드통합']
 
 
 def format_won(amount: float) -> str:
-    eok = int(amount) // 100_000_000
-    man = (int(amount) % 100_000_000) // 10_000
+    rounded = round(amount / 10_000) * 10_000  # 1만원 단위 반올림
+    eok = int(rounded) // 100_000_000
+    man = (int(rounded) % 100_000_000) // 10_000
     if eok > 0 and man > 0:
         return f'{eok}억 {man:,}만원'
     if eok > 0:
