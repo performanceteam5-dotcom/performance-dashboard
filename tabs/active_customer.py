@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import pandas as pd
 import streamlit as st
 
@@ -67,12 +68,20 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                 )
 
     st.markdown("---")
-    col_left, col_right = st.columns([3, 1])
-    with col_left:
-        st.markdown("**✍️ 활성고객 코멘트 생성**")
-        st.caption("전일 데이터 기준 · TOTAL + 상세구분별")
-    with col_right:
-        generate = st.button("코멘트 생성", type="primary", key="gen_active")
+    st.markdown("**✍️ 활성고객 코멘트 생성**")
+    st.caption("전일 데이터 기준 · TOTAL + 상세구분별")
+
+    col_gen, col_slack = st.columns([2, 1])
+    with col_gen:
+        generate = st.button("코멘트 생성", type="primary", key="gen_active", use_container_width=True)
+    with col_slack:
+        webhook_url = os.environ.get('SLACK_WEBHOOK_URL', '')
+        slack_btn = st.button(
+            "📤 슬랙으로 발송",
+            key="slack_active",
+            use_container_width=True,
+            disabled=not (st.session_state.get('active_comment') and webhook_url),
+        )
 
     if generate or st.session_state.get('active_comment'):
         if generate:
@@ -86,10 +95,22 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
             st.session_state['active_comment'] = build_active_comment(
                 day_df, target_date, month_df, COL_DETAIL
             )
+        comment = st.session_state['active_comment']
         st.text_area(
             "💬 활성고객 코멘트",
-            value=st.session_state['active_comment'],
+            value=comment,
             height=300,
             key="active_comment_area",
         )
-        st.caption("✏️ 수정 후 복사해서 슬랙에 붙여넣으세요")
+        st.caption("✏️ 수정 후 복사하거나 슬랙으로 바로 발송하세요")
+
+        if slack_btn:
+            from slack_sender import send_to_slack
+            ok, err = send_to_slack(comment)
+            if ok:
+                st.success("✅ 슬랙 발송 완료!")
+            else:
+                st.error(f"발송 실패: {err}")
+
+    if not webhook_url:
+        st.caption("💡 슬랙 발송 활성화: `.env`에 `SLACK_WEBHOOK_URL` 추가")
