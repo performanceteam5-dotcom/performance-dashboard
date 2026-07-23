@@ -28,6 +28,7 @@ MEDIA_MAP: dict[str, str] = {
 
 PART_MUTANDARD  = '무탠다드유입'
 PART_ACTIVE_CUS = '활성고객'
+PART_MUBAEDAN   = '무배당발'
 
 MERGED_DETAIL_SEGS = {'무탠다드맨', '무탠다드우먼'}
 MERGED_LABELS      = ('기획전', '상시')

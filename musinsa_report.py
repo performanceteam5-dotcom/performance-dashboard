@@ -6,10 +6,10 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from rd_loader import load_rd, COL_DATE
-from tabs import mutandard, active_customer
+from tabs import mutandard, active_customer, mubaedan
 
 load_dotenv()
-GDRIVE_FOLDER_ID = os.environ.get('GDRIVE_FOLDER_ID', '')
+RD_FOLDER_PATH = os.environ.get('RD_FOLDER_PATH', '')
 
 st.set_page_config(
     page_title="무신사 리포트 대시보드",
@@ -21,20 +21,20 @@ st.set_page_config(
 with st.sidebar:
     st.markdown("## 📊 무신사 리포트")
 
-    # Drive 자동 연동 (GDRIVE_FOLDER_ID 설정 시)
-    if GDRIVE_FOLDER_ID:
-        if st.button("🔄 Drive에서 최신 파일 불러오기", use_container_width=True):
-            with st.spinner("Drive에서 불러오는 중..."):
+    # 로컬 폴더 자동 연동 (RD_FOLDER_PATH 설정 시)
+    if RD_FOLDER_PATH:
+        if st.button("🔄 최신 RD 파일 불러오기", use_container_width=True):
+            with st.spinner("최신 파일 불러오는 중..."):
                 try:
                     from drive_loader import load_latest_rd
-                    df, name = load_latest_rd(GDRIVE_FOLDER_ID)
+                    df, name = load_latest_rd(RD_FOLDER_PATH)
                     st.session_state['rd_df'] = df
                     st.session_state['rd_name'] = name
                     st.rerun()
                 except FileNotFoundError as e:
                     st.error(str(e))
                 except Exception as e:
-                    st.error(f"Drive 연동 오류: {e}")
+                    st.error(f"파일 로딩 오류: {e}")
         st.markdown("<div style='text-align:center;color:#aaa;margin:4px 0'>또는</div>", unsafe_allow_html=True)
 
     # 수동 파일 업로드 (항상 표시)
@@ -54,12 +54,12 @@ with st.sidebar:
 
     # 로드된 데이터 없으면 안내 후 대기
     if 'rd_df' not in st.session_state:
-        if GDRIVE_FOLDER_ID:
-            st.info("Drive에서 불러오거나 CSV를 업로드하세요.")
+        if RD_FOLDER_PATH:
+            st.info("버튼을 눌러 최신 파일을 불러오거나 CSV를 직접 업로드하세요.")
         else:
             st.info(
                 "RD CSV를 업로드하면 대시보드가 표시됩니다.\n\n"
-                "Drive 자동 연동: `.env`에 `GDRIVE_FOLDER_ID`를 추가하세요."
+                "자동 연동: `.env`에 `RD_FOLDER_PATH`를 추가하세요."
             )
         st.stop()
 
@@ -97,11 +97,11 @@ if fdf.empty:
 # ── 탭 ────────────────────────────────────────────────────────────
 st.title("📊 무신사 퍼포먼스 대시보드")
 
-tab_active, tab_churn, tab_youth, tab_mt, tab_beauty, tab_foot = st.tabs([
+tab_active, tab_churn, tab_mt, tab_mb, tab_beauty, tab_foot = st.tabs([
     "🎯 활성고객",
     "↩️ 이탈고객",
-    "👟 20대유입",
     "📦 무탠유입",
+    "🎪 무배당발",
     "💄 뷰티",
     "👠 풋웨어",
 ])
@@ -112,9 +112,11 @@ with tab_active:
 with tab_mt:
     mutandard.render(fdf, df)
 
+with tab_mb:
+    mubaedan.render(fdf, df)
+
 for tab, name in [
     (tab_churn,  "이탈고객"),
-    (tab_youth,  "20대유입"),
     (tab_beauty, "뷰티"),
     (tab_foot,   "풋웨어"),
 ]:

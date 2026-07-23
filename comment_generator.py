@@ -81,6 +81,35 @@ def build_mutandard_comment(
     return '\n'.join(lines)
 
 
+def build_mubaedan_comment(
+    day_df: pd.DataFrame,
+    target_date: pd.Timestamp,
+    month_df: pd.DataFrame,
+    detail_col: str,
+) -> str:
+    lines: list[str] = []
+
+    month_kpi  = agg_kpi(month_df)
+    day_kpi    = agg_kpi(day_df)
+    month_name = f"{target_date.month}월"
+
+    lines.append('#무배당발')
+    lines.append(
+        f"- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
+        f"활성CPU {format_cpu(month_kpi['활성CPU'])}, "
+        f"고활성CPU {format_cpu(month_kpi['고활성CPU'])}, "
+        f"저활성CPU {format_cpu(month_kpi['저활성CPU'])}"
+    )
+    lines.append(_kpi_str(day_kpi))
+
+    for detail in day_df[detail_col].dropna().unique():
+        d_df = day_df[day_df[detail_col] == detail]
+        lines.append(f'\n{detail}')
+        lines.append(_kpi_str(agg_kpi(d_df)))
+
+    return '\n'.join(lines)
+
+
 def build_active_comment(
     day_df: pd.DataFrame,
     target_date: pd.Timestamp,
