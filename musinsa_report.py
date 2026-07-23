@@ -9,7 +9,7 @@ from rd_loader import load_rd, COL_DATE
 from tabs import mutandard, active_customer, mubaedan
 
 load_dotenv()
-RD_FOLDER_PATH = os.environ.get('RD_FOLDER_PATH', '')
+_HAS_AUTO = bool(os.environ.get('DROPBOX_APP_KEY') or os.environ.get('RD_FOLDER_PATH'))
 
 st.set_page_config(
     page_title="무신사 리포트 대시보드",
@@ -21,20 +21,18 @@ st.set_page_config(
 with st.sidebar:
     st.markdown("## 📊 무신사 리포트")
 
-    # 로컬 폴더 자동 연동 (RD_FOLDER_PATH 설정 시)
-    if RD_FOLDER_PATH:
+    # 자동 연동 버튼 (Dropbox API 또는 로컬 경로 설정 시)
+    if _HAS_AUTO:
         if st.button("🔄 최신 RD 파일 불러오기", use_container_width=True):
             with st.spinner("최신 파일 불러오는 중..."):
                 try:
                     from drive_loader import load_latest_rd
-                    df, name = load_latest_rd(RD_FOLDER_PATH)
+                    df, name = load_latest_rd()
                     st.session_state['rd_df'] = df
                     st.session_state['rd_name'] = name
                     st.rerun()
-                except FileNotFoundError as e:
-                    st.error(str(e))
                 except Exception as e:
-                    st.error(f"파일 로딩 오류: {e}")
+                    st.error(str(e))
         st.markdown("<div style='text-align:center;color:#aaa;margin:4px 0'>또는</div>", unsafe_allow_html=True)
 
     # 수동 파일 업로드 (항상 표시)
