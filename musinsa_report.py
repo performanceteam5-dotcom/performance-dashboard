@@ -79,33 +79,34 @@ with st.sidebar:
     date_min = df[COL_DATE].min().date()
     date_max = df[COL_DATE].max().date()
 
-    # 기간 프리셋 버튼
-    st.caption("기간 프리셋")
+    # 기간 선택
+    st.caption("기간 선택")
     p1, p2, p3 = st.columns(3)
     if p1.button("전일", use_container_width=True):
         st.session_state['date_preset'] = (date_max, date_max)
-    if p2.button("이번 주말", use_container_width=True):
+        st.session_state['show_date_input'] = False
+    if p2.button("직전 주말", use_container_width=True):
         fri, sun = _weekend_range(date_max, weeks_back=0)
         fri = max(fri, date_min)
         sun = min(sun, date_max)
         st.session_state['date_preset'] = (fri, sun)
-    if p3.button("지난 주말", use_container_width=True):
-        fri, sun = _weekend_range(date_max, weeks_back=1)
-        fri = max(fri, date_min)
-        sun = min(sun, date_max)
-        st.session_state['date_preset'] = (fri, sun)
+        st.session_state['show_date_input'] = False
+    if p3.button("직접입력", use_container_width=True):
+        st.session_state['show_date_input'] = True
 
-    preset = st.session_state.get('date_preset', (date_max, date_max))
-    date_range = st.date_input(
-        "날짜 범위",
-        value=preset,
-        min_value=date_min,
-        max_value=date_max,
-        key='date_range_input',
-    )
-    # 직접 수정 시 프리셋 초기화
-    if date_range != preset:
-        st.session_state['date_preset'] = date_range
+    if st.session_state.get('show_date_input', False):
+        preset = st.session_state.get('date_preset', (date_max, date_max))
+        date_range = st.date_input(
+            "날짜 범위",
+            value=preset,
+            min_value=date_min,
+            max_value=date_max,
+            key='date_range_input',
+        )
+        if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
+            st.session_state['date_preset'] = date_range
+    else:
+        date_range = st.session_state.get('date_preset', (date_max, date_max))
 
     if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
         start, end = date_range
