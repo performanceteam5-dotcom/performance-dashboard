@@ -128,12 +128,13 @@ def build_mubaedan_comment(
     return '\n'.join(lines)
 
 
-def _active_kpi_str(kpi: dict) -> str:
-    return (
+def _active_kpi_str(kpi: dict, italic: bool = False) -> str:
+    line = (
         f"- 전일 광고비 {format_won(kpi['광고비'])}, "
         f"활성CPU {format_cpu(kpi['활성CPU'])}, "
         f"구매CVR {format_cvr(kpi['구매CVR'])}"
     )
+    return f"_{line}_" if italic else line
 
 
 def build_active_comment(
@@ -148,20 +149,20 @@ def build_active_comment(
     day_kpi    = agg_kpi_active(day_df)
     month_name = f"{target_date.month}월"
 
-    lines.append('#활성고객')
+    lines.append('*[활성고객]*')
     lines.append(
-        f"- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
+        f"_- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
         f"활성CPU {format_cpu(month_kpi['활성CPU'])}, "
-        f"구매CVR {format_cvr(month_kpi['구매CVR'])}"
+        f"구매CVR {format_cvr(month_kpi['구매CVR'])}_"
     )
-    lines.append(_active_kpi_str(day_kpi))
+    lines.append(_active_kpi_str(day_kpi, italic=True))
 
     for detail in day_df[detail_col].dropna().unique():
         d_df = day_df[day_df[detail_col] == detail]
         kpi  = agg_kpi_active(d_df)
         if kpi['광고비'] <= 0:
             continue
-        lines.append(f'\n{detail}')
+        lines.append(f'\n*{detail}*')
         lines.append(_active_kpi_str(kpi))
 
     return '\n'.join(lines)
