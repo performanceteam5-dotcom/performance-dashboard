@@ -1,50 +1,82 @@
 from __future__ import annotations
 import os
+from datetime import timedelta
 import pandas as pd
 import streamlit as st
 
 from rd_loader import (
-    agg_kpi, delta_pct, delta_label, get_prev_date,
-    COL_DATE, COL_DETAIL, COL_PART,
-    PART_ACTIVE_CUS,
+    agg_kpi, agg_kpi_active, delta_pct, delta_label, get_prev_date,
+    COL_DATE, COL_DETAIL, COL_PART, COL_BRAND_DETAIL,
+    PART_ACTIVE_CUS, ACTIVE_EXCLUDE_BRANDS,
 )
-from comment_generator import build_active_comment, format_won, format_cpu
+from comment_generator import build_active_comment, format_won, format_cpu, format_cvr, format_roas, format_count
 
 
 def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     ac_df = full_df[full_df[COL_PART] == PART_ACTIVE_CUS].copy()
+    # 제휴 브랜드 제외
+    if COL_BRAND_DETAIL in ac_df.columns:
+        ac_df = ac_df[~ac_df[COL_BRAND_DETAIL].isin(ACTIVE_EXCLUDE_BRANDS)]
     if ac_df.empty:
         st.info("활성고객 데이터가 없습니다.")
         return
 
-    dates       = ac_df[COL_DATE].drop_duplicates().sort_values()
-    target_date = dates.max()
-    prev_date   = get_prev_date(dates, target_date)
+    target_date = ac_df[COL_DATE].max()
+    start_date  = ac_df[COL_DATE].min().date()
+    end_date    = target_date.date()
+    is_multiday = start_date != end_date
 
-    day_df  = ac_df[ac_df[COL_DATE] == target_date]
-    prev_df = ac_df[ac_df[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+    # 브랜드 제외 적용된 전체 raw (날짜 필터 없음)
+    raw_ac = raw_df[raw_df[COL_PART] == PART_ACTIVE_CUS].copy() if raw_df is not None else ac_df.copy()
+    if COL_BRAND_DETAIL in raw_ac.columns:
+        raw_ac = raw_ac[~raw_ac[COL_BRAND_DETAIL].isin(ACTIVE_EXCLUDE_BRANDS)]
+
+    if is_multiday:
+        period_days     = (end_date - start_date).days + 1
+        prev_end_date   = start_date - timedelta(days=1)
+        prev_start_date = prev_end_date - timedelta(days=period_days - 1)
+        day_df  = ac_df  # 선택 기간 전체 합산
+        prev_df = raw_ac[
+            (raw_ac[COL_DATE].dt.date >= prev_start_date) &
+            (raw_ac[COL_DATE].dt.date <= prev_end_date)
+        ]
+        header_text = (
+            f"📅 {start_date.strftime('%Y-%m-%d')} ~ {end_date.strftime('%Y-%m-%d')} "
+            f"합산 성과 (전{period_days}일 대비)"
+        )
+    else:
+        day_df    = ac_df[ac_df[COL_DATE] == target_date]
+        all_dates = raw_ac[COL_DATE].drop_duplicates().sort_values()
+        prev_date = get_prev_date(all_dates, target_date)
+        prev_df   = raw_ac[raw_ac[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+        header_text = f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)"
 
     st.markdown(
-        f"<div style='font-size:18px;font-weight:700;margin-bottom:16px'>"
-        f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)</div>",
+        f"<div style='font-size:18px;font-weight:700;margin-bottom:16px'>{header_text}</div>",
         unsafe_allow_html=True,
     )
 
-    day_kpi  = agg_kpi(day_df)
-    prev_kpi = agg_kpi(prev_df) if not prev_df.empty else None
+    day_kpi  = agg_kpi_active(day_df)
+    prev_kpi = agg_kpi_active(prev_df) if not prev_df.empty else None
 
-    c1, c2, c3, c4 = st.columns(4)
-    for col, label, key in [
-        (c1, '광고비',    '광고비'),
-        (c2, '활성CPU',   '활성CPU'),
-        (c3, '고활성CPU', '고활성CPU'),
-        (c4, '저활성CPU', '저활성CPU'),
-    ]:
+    row1 = st.columns(5)
+    row2 = st.columns(4)
+    metrics = [
+        (row1[0], '광고비',      '광고비',      format_won),
+        (row1[1], '활성CPU',     '활성CPU',     format_cpu),
+        (row1[2], '구매CVR',     '구매CVR',     format_cvr),
+        (row1[3], '구매자수',    '구매자수',    format_count),
+        (row1[4], '구매자수CPA', '구매자수CPA', format_cpu),
+        (row2[0], 'GMV7D',       'GMV7D',       format_won),
+        (row2[1], 'GMV ROAS',    'GMV ROAS',    format_roas),
+        (row2[2], 'GGMV1D',      'GGMV1D',      format_won),
+        (row2[3], 'GGMV ROAS',   'GGMV ROAS',   format_roas),
+    ]
+    for col, label, key, fmt in metrics:
         val  = day_kpi.get(key)
         prev = prev_kpi.get(key) if prev_kpi else None
         pct  = delta_pct(val, prev)
-        display = format_won(val) if key == '광고비' else format_cpu(val)
-        col.metric(label, display, delta_label(pct))
+        col.metric(label, fmt(val), delta_label(pct))
 
     st.markdown("---")
 
@@ -54,7 +86,9 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         cols = st.columns(min(len(details), 3))
         for i, detail in enumerate(details):
             d_df = day_df[day_df[COL_DETAIL] == detail]
-            kpi  = agg_kpi(d_df)
+            kpi  = agg_kpi_active(d_df)
+            if kpi['광고비'] <= 0:
+                continue
             with cols[i % 3]:
                 st.markdown(
                     f"<div style='background:#fff;border:1px solid #e8e8e8;border-radius:8px;"
@@ -62,7 +96,7 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                     f"<div style='font-weight:700;margin-bottom:6px'>{detail}</div>"
                     f"<div style='font-size:12px;color:#555'>광고비: {format_won(kpi['광고비'])}</div>"
                     f"<div style='font-size:12px;color:#555'>활성CPU: {format_cpu(kpi['활성CPU'])}</div>"
-                    f"<div style='font-size:12px;color:#555'>고활성CPU: {format_cpu(kpi['고활성CPU'])}</div>"
+                    f"<div style='font-size:12px;color:#555'>구매CVR: {format_cvr(kpi['구매CVR'])}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )

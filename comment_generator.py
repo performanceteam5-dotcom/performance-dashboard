@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pandas as pd
 from rd_loader import (
-    agg_kpi, COL_SEG, COL_DETAIL,
+    agg_kpi, agg_kpi_active, COL_SEG, COL_DETAIL,
     MERGED_DETAIL_SEGS, MERGED_LABELS,
 )
 
@@ -23,6 +23,24 @@ def format_cpu(cpu: int | None) -> str:
     if cpu is None:
         return '—'
     return f'{cpu:,}원'
+
+
+def format_cvr(cvr: float | None) -> str:
+    if cvr is None:
+        return '—'
+    return f'{cvr:.1f}%'
+
+
+def format_roas(roas: float | None) -> str:
+    if roas is None:
+        return '—'
+    return f'{roas:.2f}'
+
+
+def format_count(n: int | None) -> str:
+    if n is None:
+        return '—'
+    return f'{n:,}명'
 
 
 def _kpi_str(kpi: dict) -> str:
@@ -110,6 +128,14 @@ def build_mubaedan_comment(
     return '\n'.join(lines)
 
 
+def _active_kpi_str(kpi: dict) -> str:
+    return (
+        f"- 전일 광고비 {format_won(kpi['광고비'])}, "
+        f"활성CPU {format_cpu(kpi['활성CPU'])}, "
+        f"구매CVR {format_cvr(kpi['구매CVR'])}"
+    )
+
+
 def build_active_comment(
     day_df: pd.DataFrame,
     target_date: pd.Timestamp,
@@ -118,22 +144,24 @@ def build_active_comment(
 ) -> str:
     lines: list[str] = []
 
-    month_kpi  = agg_kpi(month_df)
-    day_kpi    = agg_kpi(day_df)
+    month_kpi  = agg_kpi_active(month_df)
+    day_kpi    = agg_kpi_active(day_df)
     month_name = f"{target_date.month}월"
 
     lines.append('#활성고객')
     lines.append(
         f"- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
         f"활성CPU {format_cpu(month_kpi['활성CPU'])}, "
-        f"고활성CPU {format_cpu(month_kpi['고활성CPU'])}, "
-        f"저활성CPU {format_cpu(month_kpi['저활성CPU'])}"
+        f"구매CVR {format_cvr(month_kpi['구매CVR'])}"
     )
-    lines.append(_kpi_str(day_kpi))
+    lines.append(_active_kpi_str(day_kpi))
 
     for detail in day_df[detail_col].dropna().unique():
         d_df = day_df[day_df[detail_col] == detail]
+        kpi  = agg_kpi_active(d_df)
+        if kpi['광고비'] <= 0:
+            continue
         lines.append(f'\n{detail}')
-        lines.append(_kpi_str(agg_kpi(d_df)))
+        lines.append(_active_kpi_str(kpi))
 
     return '\n'.join(lines)

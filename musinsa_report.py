@@ -1,11 +1,21 @@
 from __future__ import annotations
 import io
 import os
+from datetime import timedelta
 import streamlit as st
 import pandas as pd
 from dotenv import load_dotenv
 
 from rd_loader import load_rd, COL_DATE
+
+
+def _weekend_range(reference, weeks_back: int = 0):
+    """reference 기준 가장 최근 금~일 범위 반환. weeks_back=1이면 그 전 주."""
+    wd = reference.weekday()  # Mon=0, Sun=6
+    days_to_last_sun = (wd + 1) % 7
+    sun = reference - timedelta(days=days_to_last_sun + weeks_back * 7)
+    fri = sun - timedelta(days=2)
+    return fri, sun
 from tabs import mutandard, active_customer, mubaedan
 
 load_dotenv()
@@ -68,12 +78,35 @@ with st.sidebar:
     # ── 날짜·매체 필터 ──
     date_min = df[COL_DATE].min().date()
     date_max = df[COL_DATE].max().date()
+
+    # 기간 프리셋 버튼
+    st.caption("기간 프리셋")
+    p1, p2, p3 = st.columns(3)
+    if p1.button("전일", use_container_width=True):
+        st.session_state['date_preset'] = (date_max, date_max)
+    if p2.button("이번 주말", use_container_width=True):
+        fri, sun = _weekend_range(date_max, weeks_back=0)
+        fri = max(fri, date_min)
+        sun = min(sun, date_max)
+        st.session_state['date_preset'] = (fri, sun)
+    if p3.button("지난 주말", use_container_width=True):
+        fri, sun = _weekend_range(date_max, weeks_back=1)
+        fri = max(fri, date_min)
+        sun = min(sun, date_max)
+        st.session_state['date_preset'] = (fri, sun)
+
+    preset = st.session_state.get('date_preset', (date_max, date_max))
     date_range = st.date_input(
         "날짜 범위",
-        value=(date_max, date_max),
+        value=preset,
         min_value=date_min,
         max_value=date_max,
+        key='date_range_input',
     )
+    # 직접 수정 시 프리셋 초기화
+    if date_range != preset:
+        st.session_state['date_preset'] = date_range
+
     if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
         start, end = date_range
     else:

@@ -2,15 +2,23 @@ from __future__ import annotations
 import io
 import pandas as pd
 
-COL_DATE   = '일'
-COL_PART   = '종료일자'
-COL_SEG    = '캠페인/구분'
-COL_DETAIL = '상세구분'
-COL_MEDIA  = '매체'
-COL_COST   = '광고비_Fee포함'
-COL_ACTIVE = 'GA_활성사용자수'
-COL_HIGH   = 'GA_고활성사용자수'
-COL_LOW    = 'GA_저활성사용자수'
+COL_DATE      = '일'
+COL_PART      = '종료일자'
+COL_SEG       = '캠페인/구분'
+COL_DETAIL    = '상세구분'
+COL_MEDIA     = '매체'
+COL_COST      = '광고비_Fee포함'
+COL_ACTIVE    = 'GA_활성사용자수'
+COL_HIGH      = 'GA_고활성사용자수'
+COL_LOW       = 'GA_저활성사용자수'
+COL_BZ_BUYER    = 'BZ_구매자수(7d)'
+COL_GA_LOGIN    = 'GA_로그인사용자수'
+COL_IMPRESSION  = '노출'
+COL_BRAND_DETAIL = '브랜드/소재상세1'
+COL_GMV7D       = 'BZ_GMV(7D)'
+COL_GGMV1D      = 'BZ_GGMV(1D)'
+
+ACTIVE_EXCLUDE_BRANDS = {'2606케이뱅크결제제휴', '2607한국투자증권제휴'}
 
 MEDIA_MAP: dict[str, str] = {
     'Facebook':            '메타',
@@ -47,6 +55,12 @@ def calc_cpu(cost: float, users: float | None) -> int | None:
     return None
 
 
+def calc_cvr(buyer: float | None, login: float | None) -> float | None:
+    if buyer and login and login > 0:
+        return buyer / login * 100
+    return None
+
+
 def agg_kpi(df: pd.DataFrame) -> dict:
     cost   = df[COL_COST].sum()
     active = df[COL_ACTIVE].sum()
@@ -57,6 +71,34 @@ def agg_kpi(df: pd.DataFrame) -> dict:
         '활성CPU':   calc_cpu(cost, active),
         '고활성CPU': calc_cpu(cost, high),
         '저활성CPU': calc_cpu(cost, low),
+    }
+
+
+def calc_roas(revenue: float | None, cost: float) -> float | None:
+    if revenue and cost > 0:
+        return revenue / cost
+    return None
+
+
+def agg_kpi_active(df: pd.DataFrame) -> dict:
+    cost   = df[COL_COST].sum()
+    active = df[COL_ACTIVE].sum()
+    # 구매 지표: 후속기여 미포함 (노출 > 0 행만)
+    perf_df = df[df[COL_IMPRESSION] > 0] if COL_IMPRESSION in df.columns else df
+    buyer  = perf_df[COL_BZ_BUYER].sum() if COL_BZ_BUYER in perf_df.columns else None
+    login  = perf_df[COL_GA_LOGIN].sum() if COL_GA_LOGIN in perf_df.columns else None
+    gmv7d  = perf_df[COL_GMV7D].sum()   if COL_GMV7D   in perf_df.columns else None
+    ggmv1d = perf_df[COL_GGMV1D].sum()  if COL_GGMV1D  in perf_df.columns else None
+    return {
+        '광고비':      cost,
+        '활성CPU':     calc_cpu(cost, active),
+        '구매CVR':     calc_cvr(buyer, login),
+        '구매자수':    int(buyer) if buyer else None,
+        '구매자수CPA': calc_cpu(cost, buyer),
+        'GMV7D':       gmv7d,
+        'GMV ROAS':    calc_roas(gmv7d, cost),
+        'GGMV1D':      ggmv1d,
+        'GGMV ROAS':   calc_roas(ggmv1d, cost),
     }
 
 
