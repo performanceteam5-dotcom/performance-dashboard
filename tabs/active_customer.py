@@ -109,12 +109,12 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     with col_gen:
         generate = st.button("코멘트 생성", type="primary", key="gen_active", use_container_width=True)
     with col_slack:
-        webhook_url = os.environ.get('SLACK_WEBHOOK_URL', '')
+        slack_ready = bool(os.environ.get('SLACK_BOT_TOKEN') and os.environ.get('SLACK_CHANNEL_ID'))
         slack_btn = st.button(
             "📤 슬랙으로 발송",
             key="slack_active",
             use_container_width=True,
-            disabled=not (st.session_state.get('active_comment') and webhook_url),
+            disabled=not (st.session_state.get('active_comment') and slack_ready),
         )
 
     if generate or st.session_state.get('active_comment'):
@@ -148,5 +148,5 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
             else:
                 st.error(f"발송 실패: {err}")
 
-    if not webhook_url:
-        st.caption("💡 슬랙 발송 활성화: `.env`에 `SLACK_WEBHOOK_URL` 추가")
+    if not slack_ready:
+        st.caption("💡 슬랙 발송 활성화: `.env`에 `SLACK_BOT_TOKEN`, `SLACK_CHANNEL_ID` 추가")
