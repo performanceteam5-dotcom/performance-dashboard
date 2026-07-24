@@ -116,13 +116,10 @@ def delta_pct(curr: int | float | None, prev: int | float | None) -> float | Non
     return (curr - prev) / abs(prev) * 100
 
 
-def delta_label(pct: float | None) -> str:
-    if pct is None:
-        return '—'
-    if abs(pct) < 5:
-        return '— 동수준'
-    sign = '▲' if pct > 0 else '▼'
-    return f'{sign} {abs(pct):.0f}%'
+def delta_label(pct: float | None) -> str | None:
+    if pct is None or abs(pct) < 5:
+        return None
+    return f'{abs(pct):.0f}%' if pct > 0 else f'-{abs(pct):.0f}%'
 
 
 def delta_status(pct: float | None) -> str:
