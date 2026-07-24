@@ -119,12 +119,14 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
 
     if generate or st.session_state.get('active_comment'):
         if generate:
-            base_df  = raw_df if raw_df is not None else full_df
-            raw_ac   = base_df[base_df[COL_PART] == PART_ACTIVE_CUS]
-            month_df = raw_ac[
-                (raw_ac[COL_DATE].dt.year  == target_date.year) &
-                (raw_ac[COL_DATE].dt.month == target_date.month) &
-                (raw_ac[COL_DATE].dt.date  <= target_date.date())
+            base_df     = raw_df if raw_df is not None else full_df
+            raw_ac_base = base_df[base_df[COL_PART] == PART_ACTIVE_CUS]
+            if COL_BRAND_DETAIL in raw_ac_base.columns:
+                raw_ac_base = raw_ac_base[~raw_ac_base[COL_BRAND_DETAIL].isin(ACTIVE_EXCLUDE_BRANDS)]
+            month_df = raw_ac_base[
+                (raw_ac_base[COL_DATE].dt.year  == target_date.year) &
+                (raw_ac_base[COL_DATE].dt.month == target_date.month) &
+                (raw_ac_base[COL_DATE].dt.date  <= target_date.date())
             ]
             st.session_state['active_comment'] = build_active_comment(
                 day_df, target_date, month_df, COL_DETAIL
