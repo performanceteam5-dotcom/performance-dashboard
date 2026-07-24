@@ -52,7 +52,7 @@ with st.sidebar:
 
     # 로드된 데이터 없으면 안내 후 대기
     if 'rd_df' not in st.session_state:
-        if RD_FOLDER_PATH:
+        if _HAS_AUTO:
             st.info("버튼을 눌러 최신 파일을 불러오거나 CSV를 직접 업로드하세요.")
         else:
             st.info(

@@ -19,15 +19,21 @@ def _end_date(filename: str) -> datetime:
 
 def _get_dropbox_client():
     import dropbox
-    return dropbox.Dropbox(
+    from dropbox.common import PathRoot
+
+    dbx = dropbox.Dropbox(
         app_key=os.environ['DROPBOX_APP_KEY'],
         app_secret=os.environ['DROPBOX_APP_SECRET'],
         oauth2_refresh_token=os.environ['DROPBOX_REFRESH_TOKEN'],
     )
+    # 기업용 팀 폴더 접근: root namespace 사용
+    account = dbx.users_get_current_account()
+    root_ns = account.root_info.root_namespace_id
+    return dbx.with_path_root(PathRoot.namespace_id(root_ns))
 
 
 def load_from_dropbox(folder_path: str) -> tuple[pd.DataFrame, str]:
-    """Dropbox 폴더에서 최신 musinsa_Total*.csv 로드"""
+    """Dropbox 팀 폴더에서 최신 musinsa_Total*.csv 로드"""
     from rd_loader import load_rd
     import dropbox
 
