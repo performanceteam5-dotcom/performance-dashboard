@@ -33,7 +33,7 @@ with st.sidebar:
 
     # 자동 연동 버튼 (Dropbox API 또는 로컬 경로 설정 시)
     if _HAS_AUTO:
-        if st.button("🔄 최신 RD 파일 불러오기", use_container_width=True):
+        if st.button("🔄 최신 RD 불러오기", use_container_width=True):
             with st.spinner("최신 파일 불러오는 중..."):
                 try:
                     from drive_loader import load_latest_rd
