@@ -110,11 +110,12 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         generate = st.button("코멘트 생성", type="primary", key="gen_active", use_container_width=True)
     with col_slack:
         slack_ready = bool(os.environ.get('SLACK_BOT_TOKEN') and os.environ.get('SLACK_CHANNEL_ID'))
+        has_comment = bool(st.session_state.get('active_comment')) or generate
         slack_btn = st.button(
             "📤 슬랙으로 발송",
             key="slack_active",
             use_container_width=True,
-            disabled=not (st.session_state.get('active_comment') and slack_ready),
+            disabled=not (has_comment and slack_ready),
         )
 
     if generate or st.session_state.get('active_comment'):
