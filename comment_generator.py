@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pandas as pd
 from rd_loader import (
-    agg_kpi, agg_kpi_active, COL_SEG, COL_DETAIL, COL_MEDIA,
+    agg_kpi, agg_kpi_active, agg_kpi_return, COL_SEG, COL_DETAIL, COL_MEDIA,
     MERGED_DETAIL_SEGS, MERGED_LABELS,
 )
 
@@ -193,5 +193,81 @@ def build_active_comment(
             continue
         lines.append(f'\n*{detail}*')
         lines.append(_active_kpi_str(kpi, period_label=period_label))
+
+    return '\n'.join(lines)
+
+
+# ── 중저복귀 상수 ───────────────────────────────────────────────────
+_RETURN_BRANDSEARCH_MEDIA  = 'naver_brandsearch'
+_RETURN_BRANDSEARCH_DETAIL = '브랜드검색'
+_RETURN_MERGED_LABELS      = ('상시', '카탈로그')
+
+
+def _return_kpi_str(kpi: dict, italic: bool = False, period_label: str = '전일') -> str:
+    line = (
+        f"- {period_label} 광고비 {format_won(kpi['광고비'])}, "
+        f"중저복귀 CPU {format_cpu(kpi['중저복귀CPU'])}"
+    )
+    return f"_{line}_" if italic else line
+
+
+def build_return_comment(
+    day_df: pd.DataFrame,
+    target_date: pd.Timestamp,
+    month_df: pd.DataFrame,
+    period_label: str = '전일',
+) -> str:
+    lines: list[str] = []
+    month_name = f"{target_date.month}월"
+
+    bs_mask_day   = day_df[COL_MEDIA]   == _RETURN_BRANDSEARCH_MEDIA
+    bs_mask_month = month_df[COL_MEDIA] == _RETURN_BRANDSEARCH_MEDIA
+
+    incl_day    = day_df              # 브검 포함 (전체)
+    excl_day    = day_df[~bs_mask_day]    # 브검 미포함
+    incl_month  = month_df
+    excl_month  = month_df[~bs_mask_month]
+
+    lines.append('*[유입(중저/복귀)]*')
+
+    # ── 브검 포함 ──────────────────────────────────────────────────
+    lines.append('*브검 포함*')
+    incl_m_kpi = agg_kpi_return(incl_month)
+    incl_d_kpi = agg_kpi_return(incl_day)
+    lines.append(
+        f"*_- {month_name} 누적 광고비 {format_won(incl_m_kpi['광고비'])}, "
+        f"중저복귀 CPU {format_cpu(incl_m_kpi['중저복귀CPU'])}_*"
+    )
+    lines.append(_return_kpi_str(incl_d_kpi, italic=True, period_label=period_label))
+
+    # ── 브검 미포함 ────────────────────────────────────────────────
+    lines.append('')
+    lines.append('*브검 미포함*')
+    excl_m_kpi = agg_kpi_return(excl_month)
+    excl_d_kpi = agg_kpi_return(excl_day)
+    lines.append(
+        f"*_- {month_name} 누적 광고비 {format_won(excl_m_kpi['광고비'])}, "
+        f"중저복귀 CPU {format_cpu(excl_m_kpi['중저복귀CPU'])}_*"
+    )
+    lines.append(_return_kpi_str(excl_d_kpi, italic=True, period_label=period_label))
+
+    # ── 상세구분 breakdown (브검 미포함, 브랜드검색 제외) ──────────
+    detail_df = excl_day[excl_day[COL_DETAIL] != _RETURN_BRANDSEARCH_DETAIL]
+
+    merged_df = detail_df[detail_df[COL_DETAIL].isin(_RETURN_MERGED_LABELS)]
+    if not merged_df.empty:
+        kpi = agg_kpi_return(merged_df)
+        if kpi['광고비'] > 0:
+            lines.append('')
+            lines.append('상시/카탈로그')
+            lines.append(_return_kpi_str(kpi, period_label=period_label))
+
+    camp_df = detail_df[detail_df[COL_DETAIL] == '캠페인']
+    if not camp_df.empty:
+        kpi = agg_kpi_return(camp_df)
+        if kpi['광고비'] > 0:
+            lines.append('')
+            lines.append('캠페인')
+            lines.append(_return_kpi_str(kpi, period_label=period_label))
 
     return '\n'.join(lines)

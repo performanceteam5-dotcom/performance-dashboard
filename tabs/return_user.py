@@ -9,7 +9,7 @@ from rd_loader import (
     COL_DATE, COL_DETAIL, COL_PART,
     PART_RETURN_USR,
 )
-from comment_generator import build_active_comment, format_won, format_cpu, format_roas
+from comment_generator import build_return_comment, format_won, format_cpu, format_roas
 
 
 def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
@@ -121,8 +121,8 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                 (raw_base[COL_DATE].dt.month == target_date.month) &
                 (raw_base[COL_DATE].dt.date  <= target_date.date())
             ]
-            st.session_state['return_comment'] = build_active_comment(
-                day_df, target_date, month_df, COL_DETAIL,
+            st.session_state['return_comment'] = build_return_comment(
+                day_df, target_date, month_df,
                 period_label=period_label,
             )
         comment = st.session_state['return_comment']
