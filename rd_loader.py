@@ -122,6 +122,16 @@ def delta_label(pct: float | None) -> str | None:
     return f'{abs(pct):.0f}%' if pct > 0 else f'-{abs(pct):.0f}%'
 
 
+_KO_WEEKDAY = ['월', '화', '수', '목', '금', '토', '일']
+
+
+def get_period_label(start_date, end_date) -> str:
+    """날짜 범위 → 코멘트용 기간 레이블 (전일 / 금-일 / 월-수 등)"""
+    if start_date == end_date:
+        return '전일'
+    return f"{_KO_WEEKDAY[start_date.weekday()]}-{_KO_WEEKDAY[end_date.weekday()]}"
+
+
 def delta_status(pct: float | None) -> str:
     """CPU 기준: 올라가면 악화, 내려가면 개선."""
     if pct is None:

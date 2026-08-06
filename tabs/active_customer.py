@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from rd_loader import (
-    agg_kpi, agg_kpi_active, delta_pct, delta_label, get_prev_date,
+    agg_kpi, agg_kpi_active, delta_pct, delta_label, get_prev_date, get_period_label,
     COL_DATE, COL_DETAIL, COL_PART, COL_BRAND_DETAIL,
     PART_ACTIVE_CUS, ACTIVE_EXCLUDE_BRANDS,
 )
@@ -127,7 +127,8 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                 (raw_ac_base[COL_DATE].dt.date  <= target_date.date())
             ]
             st.session_state['active_comment'] = build_active_comment(
-                day_df, target_date, month_df, COL_DETAIL
+                day_df, target_date, month_df, COL_DETAIL,
+                period_label=get_period_label(start_date, end_date),
             )
         comment = st.session_state['active_comment']
         st.text_area(

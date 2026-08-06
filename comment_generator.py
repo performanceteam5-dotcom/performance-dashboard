@@ -44,9 +44,9 @@ def format_count(n: int | None) -> str:
     return f'{n:,}명'
 
 
-def _kpi_str(kpi: dict) -> str:
+def _kpi_str(kpi: dict, period_label: str = '전일') -> str:
     return (
-        f"- 전일 광고비 {format_won(kpi['광고비'])}, "
+        f"- {period_label} 광고비 {format_won(kpi['광고비'])}, "
         f"활성CPU {format_cpu(kpi['활성CPU'])}, "
         f"고활성CPU {format_cpu(kpi['고활성CPU'])}, "
         f"저활성CPU {format_cpu(kpi['저활성CPU'])}"
@@ -133,6 +133,7 @@ def build_mubaedan_comment(
     target_date: pd.Timestamp,
     month_df: pd.DataFrame,
     detail_col: str,
+    period_label: str = '전일',
 ) -> str:
     lines: list[str] = []
 
@@ -147,19 +148,19 @@ def build_mubaedan_comment(
         f"고활성CPU {format_cpu(month_kpi['고활성CPU'])}, "
         f"저활성CPU {format_cpu(month_kpi['저활성CPU'])}"
     )
-    lines.append(_kpi_str(day_kpi))
+    lines.append(_kpi_str(day_kpi, period_label=period_label))
 
     for detail in day_df[detail_col].dropna().unique():
         d_df = day_df[day_df[detail_col] == detail]
         lines.append(f'\n{detail}')
-        lines.append(_kpi_str(agg_kpi(d_df)))
+        lines.append(_kpi_str(agg_kpi(d_df), period_label=period_label))
 
     return '\n'.join(lines)
 
 
-def _active_kpi_str(kpi: dict, italic: bool = False) -> str:
+def _active_kpi_str(kpi: dict, italic: bool = False, period_label: str = '전일') -> str:
     line = (
-        f"- 전일 광고비 {format_won(kpi['광고비'])}, "
+        f"- {period_label} 광고비 {format_won(kpi['광고비'])}, "
         f"GMV ROAS {format_roas(kpi['GMV ROAS'])}"
     )
     return f"_{line}_" if italic else line
@@ -170,6 +171,7 @@ def build_active_comment(
     target_date: pd.Timestamp,
     month_df: pd.DataFrame,
     detail_col: str,
+    period_label: str = '전일',
 ) -> str:
     lines: list[str] = []
 
@@ -182,7 +184,7 @@ def build_active_comment(
         f"*_- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
         f"GMV ROAS {format_roas(month_kpi['GMV ROAS'])}_*"
     )
-    lines.append(_active_kpi_str(day_kpi, italic=True))
+    lines.append(_active_kpi_str(day_kpi, italic=True, period_label=period_label))
 
     for detail in day_df[detail_col].dropna().unique():
         d_df = day_df[day_df[detail_col] == detail]
@@ -190,6 +192,6 @@ def build_active_comment(
         if kpi['광고비'] <= 0:
             continue
         lines.append(f'\n*{detail}*')
-        lines.append(_active_kpi_str(kpi))
+        lines.append(_active_kpi_str(kpi, period_label=period_label))
 
     return '\n'.join(lines)

@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from rd_loader import (
-    agg_kpi, delta_pct, delta_label, get_prev_date,
+    agg_kpi, delta_pct, delta_label, get_prev_date, get_period_label,
     COL_DATE, COL_DETAIL, COL_PART,
     PART_MUBAEDAN,
 )
@@ -17,12 +17,15 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         st.info("무배당발 데이터가 없습니다.")
         return
 
-    dates       = mb_df[COL_DATE].drop_duplicates().sort_values()
-    target_date = dates.max()
-    prev_date   = get_prev_date(dates, target_date)
+    target_date  = mb_df[COL_DATE].max()
+    start_date   = mb_df[COL_DATE].min().date()
+    end_date     = target_date.date()
+    period_label = get_period_label(start_date, end_date)
 
-    day_df  = mb_df[mb_df[COL_DATE] == target_date]
-    prev_df = mb_df[mb_df[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+    day_df    = mb_df[mb_df[COL_DATE] == target_date]
+    all_dates = mb_df[COL_DATE].drop_duplicates().sort_values()
+    prev_date = get_prev_date(all_dates, target_date)
+    prev_df   = mb_df[mb_df[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
 
     st.markdown(
         f"<div style='font-size:18px;font-weight:700;margin-bottom:16px'>"
@@ -93,7 +96,8 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                 (raw_mb[COL_DATE].dt.date  <= target_date.date())
             ]
             st.session_state['mubaedan_comment'] = build_mubaedan_comment(
-                day_df, target_date, month_df, COL_DETAIL
+                day_df, target_date, month_df, COL_DETAIL,
+                period_label=period_label,
             )
         comment = st.session_state['mubaedan_comment']
         st.text_area(
