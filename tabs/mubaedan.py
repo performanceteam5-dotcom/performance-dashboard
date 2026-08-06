@@ -1,14 +1,15 @@
 from __future__ import annotations
 import os
+from datetime import timedelta
 import pandas as pd
 import streamlit as st
 
 from rd_loader import (
-    agg_kpi, delta_pct, delta_label, get_prev_date, get_period_label,
+    agg_kpi, agg_kpi_active, delta_pct, delta_label, get_prev_date, get_period_label,
     COL_DATE, COL_DETAIL, COL_PART,
     PART_MUBAEDAN,
 )
-from comment_generator import build_mubaedan_comment, format_won, format_cpu
+from comment_generator import build_mubaedan_comment, format_won, format_cpu, format_roas
 
 
 def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
@@ -20,34 +21,54 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     target_date  = mb_df[COL_DATE].max()
     start_date   = mb_df[COL_DATE].min().date()
     end_date     = target_date.date()
+    is_multiday  = start_date != end_date
     period_label = get_period_label(start_date, end_date)
 
-    day_df    = mb_df[mb_df[COL_DATE] == target_date]
-    all_dates = mb_df[COL_DATE].drop_duplicates().sort_values()
-    prev_date = get_prev_date(all_dates, target_date)
-    prev_df   = mb_df[mb_df[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+    raw_mb = (raw_df if raw_df is not None else full_df)
+    raw_mb = raw_mb[raw_mb[COL_PART] == PART_MUBAEDAN]
+
+    if is_multiday:
+        period_days     = (end_date - start_date).days + 1
+        prev_end_date   = start_date - timedelta(days=1)
+        prev_start_date = prev_end_date - timedelta(days=period_days - 1)
+        day_df  = mb_df
+        prev_df = raw_mb[
+            (raw_mb[COL_DATE].dt.date >= prev_start_date) &
+            (raw_mb[COL_DATE].dt.date <= prev_end_date)
+        ]
+        header_text = (
+            f"📅 {start_date.strftime('%Y-%m-%d')} ~ {end_date.strftime('%Y-%m-%d')} "
+            f"합산 성과 (전{period_days}일 대비)"
+        )
+    else:
+        day_df    = mb_df[mb_df[COL_DATE] == target_date]
+        all_dates = raw_mb[COL_DATE].drop_duplicates().sort_values()
+        prev_date = get_prev_date(all_dates, target_date)
+        prev_df   = raw_mb[raw_mb[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+        header_text = f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)"
 
     st.markdown(
-        f"<div style='font-size:18px;font-weight:700;margin-bottom:16px'>"
-        f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)</div>",
+        f"<div style='font-size:18px;font-weight:700;margin-bottom:16px'>{header_text}</div>",
         unsafe_allow_html=True,
     )
 
-    day_kpi  = agg_kpi(day_df)
-    prev_kpi = agg_kpi(prev_df) if not prev_df.empty else None
+    day_kpi  = agg_kpi_active(day_df)
+    prev_kpi = agg_kpi_active(prev_df) if not prev_df.empty else None
 
-    c1, c2, c3, c4 = st.columns(4)
-    for col, label, key in [
-        (c1, '광고비',    '광고비'),
-        (c2, '활성CPU',   '활성CPU'),
-        (c3, '고활성CPU', '고활성CPU'),
-        (c4, '저활성CPU', '저활성CPU'),
-    ]:
+    row1 = st.columns(3)
+    row2 = st.columns(3)
+    metrics = [
+        (row1[0], '광고비',       '광고비',    format_won),
+        (row1[1], 'GMV 7D',       'GMV7D',     format_won),
+        (row1[2], 'GMV 7D ROAS',  'GMV ROAS',  format_roas),
+        (row2[0], '활성CPU',      '활성CPU',   format_cpu),
+        (row2[1], 'GGMV 1D',      'GGMV1D',    format_won),
+        (row2[2], 'GGMV 1D ROAS', 'GGMV ROAS', format_roas),
+    ]
+    for col, label, key, fmt in metrics:
         val  = day_kpi.get(key)
         prev = prev_kpi.get(key) if prev_kpi else None
-        pct  = delta_pct(val, prev)
-        display = format_won(val) if key == '광고비' else format_cpu(val)
-        col.metric(label, display, delta_label(pct))
+        col.metric(label, fmt(val), delta_label(delta_pct(val, prev)))
 
     st.markdown("---")
 
@@ -57,7 +78,9 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         cols = st.columns(min(len(details), 3))
         for i, detail in enumerate(details):
             d_df = day_df[day_df[COL_DETAIL] == detail]
-            kpi  = agg_kpi(d_df)
+            kpi  = agg_kpi_active(d_df)
+            if kpi['광고비'] <= 0:
+                continue
             with cols[i % 3]:
                 st.markdown(
                     f"<div style='background:#fff;border:1px solid #e8e8e8;border-radius:8px;"
@@ -65,7 +88,7 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                     f"<div style='font-weight:700;margin-bottom:6px'>{detail}</div>"
                     f"<div style='font-size:12px;color:#555'>광고비: {format_won(kpi['광고비'])}</div>"
                     f"<div style='font-size:12px;color:#555'>활성CPU: {format_cpu(kpi['활성CPU'])}</div>"
-                    f"<div style='font-size:12px;color:#555'>고활성CPU: {format_cpu(kpi['고활성CPU'])}</div>"
+                    f"<div style='font-size:12px;color:#555'>GMV 7D ROAS: {format_roas(kpi['GMV ROAS'])}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
@@ -78,18 +101,17 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     with col_gen:
         generate = st.button("코멘트 생성", type="primary", key="gen_mubaedan", use_container_width=True)
     with col_slack:
-        webhook_url = os.environ.get('SLACK_WEBHOOK_URL', '')
+        slack_ready = bool(os.environ.get('SLACK_BOT_TOKEN') and os.environ.get('SLACK_CHANNEL_ID'))
+        has_comment = bool(st.session_state.get('mubaedan_comment')) or generate
         slack_btn = st.button(
             "📤 슬랙으로 발송",
             key="slack_mubaedan",
             use_container_width=True,
-            disabled=not (st.session_state.get('mubaedan_comment') and webhook_url),
+            disabled=not (has_comment and slack_ready),
         )
 
     if generate or st.session_state.get('mubaedan_comment'):
         if generate:
-            base_df  = raw_df if raw_df is not None else full_df
-            raw_mb   = base_df[base_df[COL_PART] == PART_MUBAEDAN]
             month_df = raw_mb[
                 (raw_mb[COL_DATE].dt.year  == target_date.year) &
                 (raw_mb[COL_DATE].dt.month == target_date.month) &
@@ -115,6 +137,3 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                 st.success("✅ 슬랙 발송 완료!")
             else:
                 st.error(f"발송 실패: {err}")
-
-    if not webhook_url:
-        st.caption("💡 슬랙 발송 활성화: `.env`에 `SLACK_WEBHOOK_URL` 추가")

@@ -136,24 +136,30 @@ def build_mubaedan_comment(
     period_label: str = '전일',
 ) -> str:
     lines: list[str] = []
-
-    month_kpi  = agg_kpi(month_df)
-    day_kpi    = agg_kpi(day_df)
     month_name = f"{target_date.month}월"
 
-    lines.append('#무배당발')
-    lines.append(
-        f"- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
-        f"활성CPU {format_cpu(month_kpi['활성CPU'])}, "
-        f"고활성CPU {format_cpu(month_kpi['고활성CPU'])}, "
-        f"저활성CPU {format_cpu(month_kpi['저활성CPU'])}"
-    )
-    lines.append(_kpi_str(day_kpi, period_label=period_label))
+    def _mb_line(kpi: dict, label: str) -> str:
+        return (
+            f"- {label} 광고비 {format_won(kpi['광고비'])}, "
+            f"활성 CPU {format_cpu(kpi['활성CPU'])}, "
+            f"ROAS {format_roas(kpi['GMV ROAS'])}"
+        )
+
+    month_kpi = agg_kpi_active(month_df)
+    day_kpi   = agg_kpi_active(day_df)
+
+    lines.append('*[무배당발 TOTAL]*')
+    lines.append(f"*_{_mb_line(month_kpi, f'{month_name} 누적')}_*")
+    lines.append(f"_{_mb_line(day_kpi, period_label)}_")
 
     for detail in day_df[detail_col].dropna().unique():
         d_df = day_df[day_df[detail_col] == detail]
-        lines.append(f'\n{detail}')
-        lines.append(_kpi_str(agg_kpi(d_df), period_label=period_label))
+        kpi  = agg_kpi_active(d_df)
+        if kpi['광고비'] <= 0:
+            continue
+        lines.append('')
+        lines.append(detail)
+        lines.append(_mb_line(kpi, period_label))
 
     return '\n'.join(lines)
 
