@@ -59,16 +59,15 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     day_kpi  = agg_kpi_active(day_df)
     prev_kpi = agg_kpi_active(prev_df) if not prev_df.empty else None
 
-    row1 = st.columns(4)
+    row1 = st.columns(3)
     row2 = st.columns(3)
     metrics = [
-        (row1[0], '광고비',      '광고비',      format_won),
-        (row1[1], 'GMV ROAS',    'GMV ROAS',    format_roas),
-        (row1[2], '구매자수',    '구매자수',    format_count),
-        (row1[3], '구매자수CPA', '구매자수CPA', format_cpu),
-        (row2[0], 'GMV7D',       'GMV7D',       format_won),
-        (row2[1], 'GGMV1D',      'GGMV1D',      format_won),
-        (row2[2], 'GGMV ROAS',   'GGMV ROAS',   format_roas),
+        (row1[0], '광고비',    '광고비',   format_won),
+        (row1[1], 'GMV ROAS',  'GMV ROAS', format_roas),
+        (row1[2], 'GMV7D',     'GMV7D',    format_won),
+        (row2[0], '활성CPU',   '활성CPU',  format_cpu),
+        (row2[1], 'GGMV1D',    'GGMV1D',   format_won),
+        (row2[2], 'GGMV ROAS', 'GGMV ROAS', format_roas),
     ]
     for col, label, key, fmt in metrics:
         val  = day_kpi.get(key)
