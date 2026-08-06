@@ -1,11 +1,12 @@
 from __future__ import annotations
 import pandas as pd
 from rd_loader import (
-    agg_kpi, agg_kpi_active, COL_SEG, COL_DETAIL,
+    agg_kpi, agg_kpi_active, COL_SEG, COL_DETAIL, COL_MEDIA,
     MERGED_DETAIL_SEGS, MERGED_LABELS,
 )
 
 SEGMENT_ORDER = ['무탠다드맨', '무탠다드우먼', '무탠다드통합']
+ROAS_MEDIA    = {'Facebook', 'Kakao'}
 
 
 def format_won(amount: float) -> str:
@@ -52,49 +53,76 @@ def _kpi_str(kpi: dict) -> str:
     )
 
 
+def _roas_line(kpi: dict, italic: bool = False) -> str:
+    line = (
+        f"- 전일 광고비 {format_won(kpi['광고비'])}, "
+        f"ROAS {format_roas(kpi['GMV ROAS'])}"
+    )
+    return f"_{line}_" if italic else line
+
+
 def build_mutandard_comment(
     day_df: pd.DataFrame,
     target_date: pd.Timestamp,
     month_df: pd.DataFrame,
 ) -> str:
     lines: list[str] = []
-
-    month_kpi  = agg_kpi(month_df)
-    day_kpi    = agg_kpi(day_df)
     month_name = f"{target_date.month}월"
 
-    lines.append('#무탠유입')
-    lines.append(
-        f"- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
-        f"활성CPU {format_cpu(month_kpi['활성CPU'])}, "
-        f"고활성CPU {format_cpu(month_kpi['고활성CPU'])}, "
-        f"저활성CPU {format_cpu(month_kpi['저활성CPU'])}"
-    )
-    lines.append(_kpi_str(day_kpi))
+    roas_day   = day_df[day_df[COL_MEDIA].isin(ROAS_MEDIA)]
+    inflow_day = day_df[~day_df[COL_MEDIA].isin(ROAS_MEDIA)]
+    roas_month   = month_df[month_df[COL_MEDIA].isin(ROAS_MEDIA)]
+    inflow_month = month_df[~month_df[COL_MEDIA].isin(ROAS_MEDIA)]
 
-    for seg in SEGMENT_ORDER:
-        seg_df = day_df[day_df[COL_SEG] == seg]
-        if seg_df.empty:
-            continue
+    # ── [거래액(무탠)] ──────────────────────────────────────────────
+    if not roas_day.empty:
+        roas_day_kpi   = agg_kpi_active(roas_day)
+        roas_month_kpi = agg_kpi_active(roas_month)
+
+        lines.append('*[거래액(무탠)]*')
+        lines.append(
+            f"*_- {month_name} 누적 광고비 {format_won(roas_month_kpi['광고비'])}, "
+            f"ROAS {format_roas(roas_month_kpi['GMV ROAS'])}_*"
+        )
+        lines.append(_roas_line(roas_day_kpi, italic=True))
+
+        for seg in SEGMENT_ORDER:
+            seg_df = roas_day[roas_day[COL_SEG] == seg]
+            if seg_df.empty:
+                continue
+
+            lines.append('')
+            lines.append(f'*[{seg}]*')
+
+            if seg in MERGED_DETAIL_SEGS:
+                merged_df = seg_df[seg_df[COL_DETAIL].isin(MERGED_LABELS)]
+                if not merged_df.empty:
+                    lines.append('*상시/기획전*')
+                    lines.append(_roas_line(agg_kpi_active(merged_df)))
+
+                camp_df = seg_df[seg_df[COL_DETAIL] == '캠페인']
+                if not camp_df.empty:
+                    lines.append('*캠페인*')
+                    lines.append(_roas_line(agg_kpi_active(camp_df)))
+            else:
+                lines.append(_roas_line(agg_kpi_active(seg_df)))
+
+    # ── [유입(무탠)] ───────────────────────────────────────────────
+    if not inflow_day.empty:
+        inflow_day_kpi   = agg_kpi(inflow_day)
+        inflow_month_kpi = agg_kpi(inflow_month)
 
         lines.append('')
-        lines.append(f'[{seg}]')
-
-        if seg in MERGED_DETAIL_SEGS:
-            merged_df = seg_df[seg_df[COL_DETAIL].isin(MERGED_LABELS)]
-            if not merged_df.empty:
-                lines.append('기획전+상시')
-                lines.append(_kpi_str(agg_kpi(merged_df)))
-
-            camp_df = seg_df[seg_df[COL_DETAIL] == '캠페인']
-            if not camp_df.empty:
-                lines.append('캠페인')
-                lines.append(_kpi_str(agg_kpi(camp_df)))
-        else:
-            cat_df = seg_df[seg_df[COL_DETAIL] == '카탈로그']
-            if not cat_df.empty:
-                lines.append('카탈로그')
-                lines.append(_kpi_str(agg_kpi(cat_df)))
+        lines.append('')
+        lines.append('*[유입(무탠)]*')
+        lines.append(
+            f"*_- {month_name} 누적 광고비 {format_won(inflow_month_kpi['광고비'])}, "
+            f"활성CPU {format_cpu(inflow_month_kpi['활성CPU'])}_*"
+        )
+        lines.append(
+            f"_- 전일 광고비 {format_won(inflow_day_kpi['광고비'])}, "
+            f"활성CPU {format_cpu(inflow_day_kpi['활성CPU'])}_"
+        )
 
     return '\n'.join(lines)
 
