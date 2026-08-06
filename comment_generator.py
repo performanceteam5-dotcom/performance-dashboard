@@ -131,8 +131,7 @@ def build_mubaedan_comment(
 def _active_kpi_str(kpi: dict, italic: bool = False) -> str:
     line = (
         f"- 전일 광고비 {format_won(kpi['광고비'])}, "
-        f"활성CPU {format_cpu(kpi['활성CPU'])}, "
-        f"구매CVR {format_cvr(kpi['구매CVR'])}"
+        f"GMV ROAS {format_roas(kpi['GMV ROAS'])}"
     )
     return f"_{line}_" if italic else line
 
@@ -152,8 +151,7 @@ def build_active_comment(
     lines.append('*[활성고객]*')
     lines.append(
         f"_- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
-        f"활성CPU {format_cpu(month_kpi['활성CPU'])}, "
-        f"구매CVR {format_cvr(month_kpi['구매CVR'])}_"
+        f"GMV ROAS {format_roas(month_kpi['GMV ROAS'])}_"
     )
     lines.append(_active_kpi_str(day_kpi, italic=True))
 
