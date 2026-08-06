@@ -6,9 +6,11 @@ import streamlit as st
 
 from rd_loader import (
     agg_kpi_return, delta_pct, delta_label, get_prev_date, get_period_label,
-    COL_DATE, COL_DETAIL, COL_PART,
+    COL_DATE, COL_DETAIL, COL_MEDIA, COL_PART,
     PART_RETURN_USR,
 )
+
+_BS_MEDIA = 'naver_brandsearch'
 from comment_generator import build_return_comment, format_won, format_cpu, format_roas
 
 
@@ -53,24 +55,36 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         unsafe_allow_html=True,
     )
 
-    day_kpi  = agg_kpi_return(day_df)
-    prev_kpi = agg_kpi_return(prev_df) if not prev_df.empty else None
-
-    row1 = st.columns(3)
-    row2 = st.columns(3)
-    metrics = [
-        (row1[0], '광고비',        '광고비',    format_won),
-        (row1[1], 'GMV 7D',        'GMV7D',     format_won),
-        (row1[2], 'GMV 7D ROAS',   'GMV ROAS',  format_roas),
-        (row2[0], '중저복귀CPU',   '중저복귀CPU', format_cpu),
-        (row2[1], 'GGMV 1D',       'GGMV1D',    format_won),
-        (row2[2], 'GGMV 1D ROAS',  'GGMV ROAS', format_roas),
+    metrics_def = [
+        ('광고비',       '광고비',    format_won),
+        ('GMV 7D',       'GMV7D',     format_won),
+        ('GMV 7D ROAS',  'GMV ROAS',  format_roas),
+        ('중저복귀CPU',  '중저복귀CPU', format_cpu),
+        ('GGMV 1D',      'GGMV1D',    format_won),
+        ('GGMV 1D ROAS', 'GGMV ROAS', format_roas),
     ]
-    for col, label, key, fmt in metrics:
-        val  = day_kpi.get(key)
-        prev = prev_kpi.get(key) if prev_kpi else None
-        pct  = delta_pct(val, prev)
-        col.metric(label, fmt(val), delta_label(pct))
+
+    def _render_cards(d_df: pd.DataFrame, p_df: pd.DataFrame, title: str):
+        st.markdown(f"**{title}**")
+        kpi  = agg_kpi_return(d_df)
+        prev = agg_kpi_return(p_df) if not p_df.empty else None
+        row1 = st.columns(3)
+        row2 = st.columns(3)
+        for col, (label, key, fmt) in zip(row1 + row2, metrics_def):
+            val  = kpi.get(key)
+            pval = prev.get(key) if prev else None
+            col.metric(label, fmt(val), delta_label(delta_pct(val, pval)))
+
+    bs_mask     = day_df[COL_MEDIA]  == _BS_MEDIA
+    bs_mask_p   = prev_df[COL_MEDIA] == _BS_MEDIA if not prev_df.empty else pd.Series(dtype=bool)
+
+    _render_cards(day_df, prev_df, '브검 포함')
+    st.markdown("")
+    _render_cards(
+        day_df[~bs_mask],
+        prev_df[~bs_mask_p] if not prev_df.empty else prev_df,
+        '브검 미포함',
+    )
 
     st.markdown("---")
 
