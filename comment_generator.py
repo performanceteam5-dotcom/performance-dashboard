@@ -53,9 +53,9 @@ def _kpi_str(kpi: dict) -> str:
     )
 
 
-def _roas_line(kpi: dict, italic: bool = False) -> str:
+def _roas_line(kpi: dict, italic: bool = False, period_label: str = '전일') -> str:
     line = (
-        f"- 전일 광고비 {format_won(kpi['광고비'])}, "
+        f"- {period_label} 광고비 {format_won(kpi['광고비'])}, "
         f"ROAS {format_roas(kpi['GMV ROAS'])}"
     )
     return f"_{line}_" if italic else line
@@ -65,6 +65,7 @@ def build_mutandard_comment(
     day_df: pd.DataFrame,
     target_date: pd.Timestamp,
     month_df: pd.DataFrame,
+    period_label: str = '전일',
 ) -> str:
     lines: list[str] = []
     month_name = f"{target_date.month}월"
@@ -84,7 +85,7 @@ def build_mutandard_comment(
             f"*_- {month_name} 누적 광고비 {format_won(roas_month_kpi['광고비'])}, "
             f"ROAS {format_roas(roas_month_kpi['GMV ROAS'])}_*"
         )
-        lines.append(_roas_line(roas_day_kpi, italic=True))
+        lines.append(_roas_line(roas_day_kpi, italic=True, period_label=period_label))
 
         for seg in SEGMENT_ORDER:
             seg_df = roas_day[roas_day[COL_SEG] == seg]
@@ -98,14 +99,14 @@ def build_mutandard_comment(
                 merged_df = seg_df[seg_df[COL_DETAIL].isin(MERGED_LABELS)]
                 if not merged_df.empty:
                     lines.append('*상시/기획전*')
-                    lines.append(_roas_line(agg_kpi_active(merged_df)))
+                    lines.append(_roas_line(agg_kpi_active(merged_df), period_label=period_label))
 
                 camp_df = seg_df[seg_df[COL_DETAIL] == '캠페인']
                 if not camp_df.empty:
                     lines.append('*캠페인*')
-                    lines.append(_roas_line(agg_kpi_active(camp_df)))
+                    lines.append(_roas_line(agg_kpi_active(camp_df), period_label=period_label))
             else:
-                lines.append(_roas_line(agg_kpi_active(seg_df)))
+                lines.append(_roas_line(agg_kpi_active(seg_df), period_label=period_label))
 
     # ── [유입(무탠)] ───────────────────────────────────────────────
     if not inflow_day.empty:
@@ -120,7 +121,7 @@ def build_mutandard_comment(
             f"활성CPU {format_cpu(inflow_month_kpi['활성CPU'])}_*"
         )
         lines.append(
-            f"_- 전일 광고비 {format_won(inflow_day_kpi['광고비'])}, "
+            f"_- {period_label} 광고비 {format_won(inflow_day_kpi['광고비'])}, "
             f"활성CPU {format_cpu(inflow_day_kpi['활성CPU'])}_"
         )
 

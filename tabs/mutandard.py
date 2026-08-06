@@ -12,6 +12,7 @@ from rd_loader import (
 from comment_generator import build_mutandard_comment, format_won, format_cpu, format_roas
 
 SEGMENT_ORDER = ['무탠다드맨', '무탠다드우먼', '무탠다드통합']
+_KO_WEEKDAY   = ['월', '화', '수', '목', '금', '토', '일']
 SEGMENT_EMOJI = {'무탠다드맨': '🔵', '무탠다드우먼': '🔴', '무탠다드통합': '🟢'}
 SEGMENT_BG    = {'무탠다드맨': '#eef3fb', '무탠다드우먼': '#fdf2fb', '무탠다드통합': '#eefaf3'}
 
@@ -68,16 +69,18 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
             (raw_mt[COL_DATE].dt.date >= prev_start_date) &
             (raw_mt[COL_DATE].dt.date <= prev_end_date)
         ]
-        header_text = (
+        header_text  = (
             f"📅 {start_date.strftime('%Y-%m-%d')} ~ {end_date.strftime('%Y-%m-%d')} "
             f"합산 성과 (전{period_days}일 대비)"
         )
+        period_label = f"{_KO_WEEKDAY[start_date.weekday()]}-{_KO_WEEKDAY[end_date.weekday()]}"
     else:
-        day_df    = mt_df[mt_df[COL_DATE] == target_date]
-        all_dates = raw_mt[COL_DATE].drop_duplicates().sort_values()
-        prev_date = get_prev_date(all_dates, target_date)
-        prev_df   = raw_mt[raw_mt[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
-        header_text = f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)"
+        day_df       = mt_df[mt_df[COL_DATE] == target_date]
+        all_dates    = raw_mt[COL_DATE].drop_duplicates().sort_values()
+        prev_date    = get_prev_date(all_dates, target_date)
+        prev_df      = raw_mt[raw_mt[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+        header_text  = f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)"
+        period_label = '전일'
 
     # 월 누적: 당월 1일 ~ target_date
     month_df = raw_mt[
@@ -156,7 +159,7 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     if generate or st.session_state.get('mutandard_comment'):
         if generate:
             st.session_state['mutandard_comment'] = build_mutandard_comment(
-                day_df, target_date, month_df
+                day_df, target_date, month_df, period_label=period_label
             )
         comment = st.session_state['mutandard_comment']
         st.text_area(
