@@ -148,10 +148,10 @@ def build_active_comment(
     day_kpi    = agg_kpi_active(day_df)
     month_name = f"{target_date.month}월"
 
-    lines.append('*[활성고객]*')
+    lines.append('*[거래액(활성)]*')
     lines.append(
-        f"_- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
-        f"GMV ROAS {format_roas(month_kpi['GMV ROAS'])}_"
+        f"*_- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
+        f"GMV ROAS {format_roas(month_kpi['GMV ROAS'])}_*"
     )
     lines.append(_active_kpi_str(day_kpi, italic=True))
 
