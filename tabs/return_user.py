@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from rd_loader import (
-    agg_kpi_active, delta_pct, delta_label, get_prev_date, get_period_label,
+    agg_kpi_return, delta_pct, delta_label, get_prev_date, get_period_label,
     COL_DATE, COL_DETAIL, COL_PART,
     PART_RETURN_USR,
 )
@@ -53,18 +53,18 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         unsafe_allow_html=True,
     )
 
-    day_kpi  = agg_kpi_active(day_df)
-    prev_kpi = agg_kpi_active(prev_df) if not prev_df.empty else None
+    day_kpi  = agg_kpi_return(day_df)
+    prev_kpi = agg_kpi_return(prev_df) if not prev_df.empty else None
 
     row1 = st.columns(3)
     row2 = st.columns(3)
     metrics = [
-        (row1[0], '광고비',       '광고비',    format_won),
-        (row1[1], 'GMV 7D',       'GMV7D',     format_won),
-        (row1[2], 'GMV 7D ROAS',  'GMV ROAS',  format_roas),
-        (row2[0], '활성CPU',      '활성CPU',   format_cpu),
-        (row2[1], 'GGMV 1D',      'GGMV1D',    format_won),
-        (row2[2], 'GGMV 1D ROAS', 'GGMV ROAS', format_roas),
+        (row1[0], '광고비',        '광고비',    format_won),
+        (row1[1], 'GMV 7D',        'GMV7D',     format_won),
+        (row1[2], 'GMV 7D ROAS',   'GMV ROAS',  format_roas),
+        (row2[0], '중저복귀CPU',   '중저복귀CPU', format_cpu),
+        (row2[1], 'GGMV 1D',       'GGMV1D',    format_won),
+        (row2[2], 'GGMV 1D ROAS',  'GGMV ROAS', format_roas),
     ]
     for col, label, key, fmt in metrics:
         val  = day_kpi.get(key)
@@ -80,7 +80,7 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         cols = st.columns(min(len(details), 3))
         for i, detail in enumerate(details):
             d_df = day_df[day_df[COL_DETAIL] == detail]
-            kpi  = agg_kpi_active(d_df)
+            kpi  = agg_kpi_return(d_df)
             if kpi['광고비'] <= 0:
                 continue
             with cols[i % 3]:
@@ -89,8 +89,8 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                     f"padding:12px 14px;margin-bottom:8px'>"
                     f"<div style='font-weight:700;margin-bottom:6px'>{detail}</div>"
                     f"<div style='font-size:12px;color:#555'>광고비: {format_won(kpi['광고비'])}</div>"
+                    f"<div style='font-size:12px;color:#555'>중저복귀CPU: {format_cpu(kpi['중저복귀CPU'])}</div>"
                     f"<div style='font-size:12px;color:#555'>GMV 7D ROAS: {format_roas(kpi['GMV ROAS'])}</div>"
-                    f"<div style='font-size:12px;color:#555'>GGMV 1D ROAS: {format_roas(kpi['GGMV ROAS'])}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )

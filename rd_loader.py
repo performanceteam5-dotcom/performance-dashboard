@@ -15,8 +15,9 @@ COL_BZ_BUYER    = 'BZ_구매자수(7d)'
 COL_GA_LOGIN    = 'GA_로그인사용자수'
 COL_IMPRESSION  = '노출'
 COL_BRAND_DETAIL = '브랜드/소재상세1'
-COL_GMV7D       = 'BZ_GMV(7D)'
-COL_GGMV1D      = 'BZ_GGMV(1D)'
+COL_GMV7D           = 'BZ_GMV(7D)'
+COL_GGMV1D          = 'BZ_GGMV(1D)'
+COL_RETURN_CPU_USER = '중저활+복귀사용자수'
 
 ACTIVE_EXCLUDE_BRANDS = {'2606케이뱅크결제제휴', '2607한국투자증권제휴'}
 
@@ -96,6 +97,22 @@ def agg_kpi_active(df: pd.DataFrame) -> dict:
         '구매CVR':     calc_cvr(buyer, login),
         '구매자수':    int(buyer) if buyer else None,
         '구매자수CPA': calc_cpu(cost, buyer),
+        'GMV7D':       gmv7d,
+        'GMV ROAS':    calc_roas(gmv7d, cost),
+        'GGMV1D':      ggmv1d,
+        'GGMV ROAS':   calc_roas(ggmv1d, cost),
+    }
+
+
+def agg_kpi_return(df: pd.DataFrame) -> dict:
+    cost        = df[COL_COST].sum()
+    return_user = df[COL_RETURN_CPU_USER].sum() if COL_RETURN_CPU_USER in df.columns else None
+    perf_df     = df[df[COL_IMPRESSION] > 0] if COL_IMPRESSION in df.columns else df
+    gmv7d       = perf_df[COL_GMV7D].sum()  if COL_GMV7D  in perf_df.columns else None
+    ggmv1d      = perf_df[COL_GGMV1D].sum() if COL_GGMV1D in perf_df.columns else None
+    return {
+        '광고비':      cost,
+        '중저복귀CPU': calc_cpu(cost, return_user) if return_user else 0,
         'GMV7D':       gmv7d,
         'GMV ROAS':    calc_roas(gmv7d, cost),
         'GGMV1D':      ggmv1d,
