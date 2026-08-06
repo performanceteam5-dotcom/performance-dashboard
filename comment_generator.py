@@ -92,21 +92,30 @@ def build_mutandard_comment(
             if seg_df.empty:
                 continue
 
-            lines.append('')
-            lines.append(f'*[{seg}]*')
-
+            detail_lines: list[str] = []
             if seg in MERGED_DETAIL_SEGS:
                 merged_df = seg_df[seg_df[COL_DETAIL].isin(MERGED_LABELS)]
                 if not merged_df.empty:
-                    lines.append('*상시/기획전*')
-                    lines.append(_roas_line(agg_kpi_active(merged_df), period_label=period_label))
+                    kpi = agg_kpi_active(merged_df)
+                    if kpi['광고비'] > 0:
+                        detail_lines.append('*상시/기획전*')
+                        detail_lines.append(_roas_line(kpi, period_label=period_label))
 
                 camp_df = seg_df[seg_df[COL_DETAIL] == '캠페인']
                 if not camp_df.empty:
-                    lines.append('*캠페인*')
-                    lines.append(_roas_line(agg_kpi_active(camp_df), period_label=period_label))
+                    kpi = agg_kpi_active(camp_df)
+                    if kpi['광고비'] > 0:
+                        detail_lines.append('*캠페인*')
+                        detail_lines.append(_roas_line(kpi, period_label=period_label))
             else:
-                lines.append(_roas_line(agg_kpi_active(seg_df), period_label=period_label))
+                kpi = agg_kpi_active(seg_df)
+                if kpi['광고비'] > 0:
+                    detail_lines.append(_roas_line(kpi, period_label=period_label))
+
+            if detail_lines:
+                lines.append('')
+                lines.append(f'*[{seg}]*')
+                lines.extend(detail_lines)
 
     # ── [유입(무탠)] ───────────────────────────────────────────────
     if not inflow_day.empty:
@@ -118,14 +127,41 @@ def build_mutandard_comment(
         lines.append('*[유입(무탠)]*')
         lines.append(
             f"*_- {month_name} 누적 광고비 {format_won(inflow_month_kpi['광고비'])}, "
-            f"활성CPU {format_cpu(inflow_month_kpi['활성CPU'])}_*"
+            f"활성 CPU {format_cpu(inflow_month_kpi['활성CPU'])}_*"
         )
         lines.append(
             f"_- {period_label} 광고비 {format_won(inflow_day_kpi['광고비'])}, "
-            f"활성CPU {format_cpu(inflow_day_kpi['활성CPU'])}_"
+            f"활성 CPU {format_cpu(inflow_day_kpi['활성CPU'])}_"
         )
 
     return '\n'.join(lines)
+
+
+def build_dau_total_comment(
+    day_df: pd.DataFrame,
+    target_date: pd.Timestamp,
+    month_df: pd.DataFrame,
+    period_label: str = '전일',
+) -> str:
+    month_kpi  = agg_kpi_active(month_df)
+    day_kpi    = agg_kpi_active(day_df)
+    month_name = f"{target_date.month}월"
+    return '\n'.join([
+        '*[DAU TOTAL]*',
+        (
+            f"*_- {month_name} 누적 광고비 {format_won(month_kpi['광고비'])}, "
+            f"활성 CPU {format_cpu(month_kpi['활성CPU'])}, "
+            f"ROAS {format_roas(month_kpi['GMV ROAS'])}_*"
+        ),
+        (
+            f"_- {period_label} 광고비 {format_won(day_kpi['광고비'])}, "
+            f"활성 CPU {format_cpu(day_kpi['활성CPU'])}, "
+            f"ROAS {format_roas(day_kpi['GMV ROAS'])}_"
+        ),
+    ])
+
+
+_MUBAEDAN_DETAIL_ORDER = ['카탈로그', '상시', '기획전']
 
 
 def build_mubaedan_comment(
@@ -152,13 +188,16 @@ def build_mubaedan_comment(
     lines.append(f"*_{_mb_line(month_kpi, f'{month_name} 누적')}_*")
     lines.append(f"_{_mb_line(day_kpi, period_label)}_")
 
-    for detail in day_df[detail_col].dropna().unique():
+    all_details = set(day_df[detail_col].dropna().unique())
+    ordered     = [d for d in _MUBAEDAN_DETAIL_ORDER if d in all_details]
+    others      = sorted(d for d in all_details if d not in set(_MUBAEDAN_DETAIL_ORDER))
+    for detail in ordered + others:
         d_df = day_df[day_df[detail_col] == detail]
         kpi  = agg_kpi_active(d_df)
         if kpi['광고비'] <= 0:
             continue
         lines.append('')
-        lines.append(detail)
+        lines.append(f'*{detail}*')
         lines.append(_mb_line(kpi, period_label))
 
     return '\n'.join(lines)
@@ -265,7 +304,7 @@ def build_return_comment(
         kpi = agg_kpi_return(merged_df)
         if kpi['광고비'] > 0:
             lines.append('')
-            lines.append('상시/카탈로그')
+            lines.append('*상시/카탈로그*')
             lines.append(_return_kpi_str(kpi, period_label=period_label))
 
     camp_df = detail_df[detail_df[COL_DETAIL] == '캠페인']
@@ -273,7 +312,7 @@ def build_return_comment(
         kpi = agg_kpi_return(camp_df)
         if kpi['광고비'] > 0:
             lines.append('')
-            lines.append('캠페인')
+            lines.append('*캠페인*')
             lines.append(_return_kpi_str(kpi, period_label=period_label))
 
     return '\n'.join(lines)

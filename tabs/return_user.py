@@ -14,6 +14,29 @@ _BS_MEDIA = 'naver_brandsearch'
 from comment_generator import build_return_comment, format_won, format_cpu, format_roas
 
 
+def get_comment(
+    raw_df: pd.DataFrame,
+    target_date: pd.Timestamp,
+    start_date,
+    end_date,
+    period_label: str = '전일',
+) -> str:
+    raw_ru = raw_df[raw_df[COL_PART] == PART_RETURN_USR]
+    if start_date == end_date:
+        day_df = raw_ru[raw_ru[COL_DATE].dt.date == end_date]
+    else:
+        day_df = raw_ru[
+            (raw_ru[COL_DATE].dt.date >= start_date) &
+            (raw_ru[COL_DATE].dt.date <= end_date)
+        ]
+    month_df = raw_ru[
+        (raw_ru[COL_DATE].dt.year  == target_date.year) &
+        (raw_ru[COL_DATE].dt.month == target_date.month) &
+        (raw_ru[COL_DATE].dt.date  <= target_date.date())
+    ]
+    return build_return_comment(day_df, target_date, month_df, period_label=period_label)
+
+
 def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     ru_df = full_df[full_df[COL_PART] == PART_RETURN_USR].copy()
     if ru_df.empty:
@@ -128,16 +151,9 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
 
     if generate or st.session_state.get('return_comment'):
         if generate:
-            base_df  = raw_df if raw_df is not None else full_df
-            raw_base = base_df[base_df[COL_PART] == PART_RETURN_USR]
-            month_df = raw_base[
-                (raw_base[COL_DATE].dt.year  == target_date.year) &
-                (raw_base[COL_DATE].dt.month == target_date.month) &
-                (raw_base[COL_DATE].dt.date  <= target_date.date())
-            ]
-            st.session_state['return_comment'] = build_return_comment(
-                day_df, target_date, month_df,
-                period_label=period_label,
+            base_df = raw_df if raw_df is not None else full_df
+            st.session_state['return_comment'] = get_comment(
+                base_df, target_date, start_date, end_date, period_label=period_label
             )
         comment = st.session_state['return_comment']
         st.text_area(

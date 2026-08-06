@@ -16,7 +16,7 @@ def _weekend_range(reference, weeks_back: int = 0):
     sun = reference - timedelta(days=days_to_last_sun + weeks_back * 7)
     fri = sun - timedelta(days=2)
     return fri, sun
-from tabs import mutandard, active_customer, mubaedan, return_user
+from tabs import mutandard, active_customer, mubaedan, return_user, dau
 
 load_dotenv()
 _HAS_AUTO = bool(os.environ.get('DROPBOX_APP_KEY') or os.environ.get('RD_FOLDER_PATH'))
@@ -129,12 +129,16 @@ if fdf.empty:
 # ── 탭 ────────────────────────────────────────────────────────────
 st.title("📊 무신사 퍼포먼스 대시보드")
 
-tab_active, tab_mt, tab_churn, tab_mb = st.tabs([
+tab_dau, tab_active, tab_mt, tab_churn, tab_mb = st.tabs([
+    "📊 DAU",
     "🎯 활성고객",
     "📦 무탠유입",
     "↩️ 중저복귀",
     "🎪 무배당발",
 ])
+
+with tab_dau:
+    dau.render(fdf, df)
 
 with tab_active:
     active_customer.render(fdf, df)

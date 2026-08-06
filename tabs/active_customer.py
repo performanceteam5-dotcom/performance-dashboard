@@ -12,6 +12,31 @@ from rd_loader import (
 from comment_generator import build_active_comment, format_won, format_cpu, format_cvr, format_roas, format_count
 
 
+def get_comment(
+    raw_df: pd.DataFrame,
+    target_date: pd.Timestamp,
+    start_date,
+    end_date,
+    period_label: str = '전일',
+) -> str:
+    raw_ac = raw_df[raw_df[COL_PART] == PART_ACTIVE_CUS].copy()
+    if COL_BRAND_DETAIL in raw_ac.columns:
+        raw_ac = raw_ac[~raw_ac[COL_BRAND_DETAIL].isin(ACTIVE_EXCLUDE_BRANDS)]
+    if start_date == end_date:
+        day_df = raw_ac[raw_ac[COL_DATE].dt.date == end_date]
+    else:
+        day_df = raw_ac[
+            (raw_ac[COL_DATE].dt.date >= start_date) &
+            (raw_ac[COL_DATE].dt.date <= end_date)
+        ]
+    month_df = raw_ac[
+        (raw_ac[COL_DATE].dt.year  == target_date.year) &
+        (raw_ac[COL_DATE].dt.month == target_date.month) &
+        (raw_ac[COL_DATE].dt.date  <= target_date.date())
+    ]
+    return build_active_comment(day_df, target_date, month_df, COL_DETAIL, period_label=period_label)
+
+
 def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     ac_df = full_df[full_df[COL_PART] == PART_ACTIVE_CUS].copy()
     # 제휴 브랜드 제외
@@ -117,17 +142,9 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
 
     if generate or st.session_state.get('active_comment'):
         if generate:
-            base_df     = raw_df if raw_df is not None else full_df
-            raw_ac_base = base_df[base_df[COL_PART] == PART_ACTIVE_CUS]
-            if COL_BRAND_DETAIL in raw_ac_base.columns:
-                raw_ac_base = raw_ac_base[~raw_ac_base[COL_BRAND_DETAIL].isin(ACTIVE_EXCLUDE_BRANDS)]
-            month_df = raw_ac_base[
-                (raw_ac_base[COL_DATE].dt.year  == target_date.year) &
-                (raw_ac_base[COL_DATE].dt.month == target_date.month) &
-                (raw_ac_base[COL_DATE].dt.date  <= target_date.date())
-            ]
-            st.session_state['active_comment'] = build_active_comment(
-                day_df, target_date, month_df, COL_DETAIL,
+            base_df = raw_df if raw_df is not None else full_df
+            st.session_state['active_comment'] = get_comment(
+                base_df, target_date, start_date, end_date,
                 period_label=get_period_label(start_date, end_date),
             )
         comment = st.session_state['active_comment']

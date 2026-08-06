@@ -44,6 +44,29 @@ def _render_kpi_cards(kpi: dict, prev_kpi: dict | None):
         col.metric(label, fmt(val), delta_label(pct))
 
 
+def get_comment(
+    raw_df: pd.DataFrame,
+    target_date: pd.Timestamp,
+    start_date,
+    end_date,
+    period_label: str = '전일',
+) -> str:
+    raw_mt = raw_df[raw_df[COL_PART] == PART_MUTANDARD]
+    if start_date == end_date:
+        day_df = raw_mt[raw_mt[COL_DATE].dt.date == end_date]
+    else:
+        day_df = raw_mt[
+            (raw_mt[COL_DATE].dt.date >= start_date) &
+            (raw_mt[COL_DATE].dt.date <= end_date)
+        ]
+    month_df = raw_mt[
+        (raw_mt[COL_DATE].dt.year  == target_date.year) &
+        (raw_mt[COL_DATE].dt.month == target_date.month) &
+        (raw_mt[COL_DATE].dt.date  <= target_date.date())
+    ]
+    return build_mutandard_comment(day_df, target_date, month_df, period_label=period_label)
+
+
 def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     mt_df = full_df[full_df[COL_PART] == PART_MUTANDARD].copy()
     if mt_df.empty:
@@ -157,8 +180,9 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
 
     if generate or st.session_state.get('mutandard_comment'):
         if generate:
-            st.session_state['mutandard_comment'] = build_mutandard_comment(
-                day_df, target_date, month_df, period_label=period_label
+            base_df = raw_df if raw_df is not None else full_df
+            st.session_state['mutandard_comment'] = get_comment(
+                base_df, target_date, start_date, end_date, period_label=period_label
             )
         comment = st.session_state['mutandard_comment']
         st.text_area(
