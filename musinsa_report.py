@@ -16,7 +16,7 @@ def _weekend_range(reference, weeks_back: int = 0):
     sun = reference - timedelta(days=days_to_last_sun + weeks_back * 7)
     fri = sun - timedelta(days=2)
     return fri, sun
-from tabs import mutandard, active_customer, mubaedan
+from tabs import mutandard, active_customer, mubaedan, return_user
 
 load_dotenv()
 _HAS_AUTO = bool(os.environ.get('DROPBOX_APP_KEY') or os.environ.get('RD_FOLDER_PATH'))
@@ -143,7 +143,7 @@ with tab_mt:
     mutandard.render(fdf, df)
 
 with tab_churn:
-    st.info("'중저복귀' 탭은 추후 구현 예정입니다.")
+    return_user.render(fdf, df)
 
 with tab_mb:
     mubaedan.render(fdf, df)
