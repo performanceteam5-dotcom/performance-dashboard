@@ -62,12 +62,12 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     row1 = st.columns(3)
     row2 = st.columns(3)
     metrics = [
-        (row1[0], '광고비',    '광고비',   format_won),
-        (row1[1], 'GMV ROAS',  'GMV ROAS', format_roas),
-        (row1[2], 'GMV7D',     'GMV7D',    format_won),
-        (row2[0], '활성CPU',   '활성CPU',  format_cpu),
-        (row2[1], 'GGMV1D',    'GGMV1D',   format_won),
-        (row2[2], 'GGMV ROAS', 'GGMV ROAS', format_roas),
+        (row1[0], '광고비',       '광고비',    format_won),
+        (row1[1], 'GMV 7D',       'GMV7D',     format_won),
+        (row1[2], 'GMV 7D ROAS',  'GMV ROAS',  format_roas),
+        (row2[0], '활성CPU',      '활성CPU',   format_cpu),
+        (row2[1], 'GGMV 1D',      'GGMV1D',    format_won),
+        (row2[2], 'GGMV 1D ROAS', 'GGMV ROAS', format_roas),
     ]
     for col, label, key, fmt in metrics:
         val  = day_kpi.get(key)
@@ -92,8 +92,8 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
                     f"padding:12px 14px;margin-bottom:8px'>"
                     f"<div style='font-weight:700;margin-bottom:6px'>{detail}</div>"
                     f"<div style='font-size:12px;color:#555'>광고비: {format_won(kpi['광고비'])}</div>"
-                    f"<div style='font-size:12px;color:#555'>활성CPU: {format_cpu(kpi['활성CPU'])}</div>"
-                    f"<div style='font-size:12px;color:#555'>구매CVR: {format_cvr(kpi['구매CVR'])}</div>"
+                    f"<div style='font-size:12px;color:#555'>GMV 7D ROAS: {format_roas(kpi['GMV ROAS'])}</div>"
+                    f"<div style='font-size:12px;color:#555'>GGMV 1D ROAS: {format_roas(kpi['GGMV ROAS'])}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )

@@ -34,7 +34,7 @@ def format_cvr(cvr: float | None) -> str:
 def format_roas(roas: float | None) -> str:
     if roas is None:
         return '—'
-    return f'{roas:.2f}'
+    return f'{roas * 100:.0f}%'
 
 
 def format_count(n: int | None) -> str:
