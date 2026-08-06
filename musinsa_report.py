@@ -129,13 +129,11 @@ if fdf.empty:
 # ── 탭 ────────────────────────────────────────────────────────────
 st.title("📊 무신사 퍼포먼스 대시보드")
 
-tab_active, tab_churn, tab_mt, tab_mb, tab_beauty, tab_foot = st.tabs([
+tab_active, tab_mt, tab_churn, tab_mb = st.tabs([
     "🎯 활성고객",
-    "↩️ 이탈고객",
     "📦 무탠유입",
+    "↩️ 중저복귀",
     "🎪 무배당발",
-    "💄 뷰티",
-    "👠 풋웨어",
 ])
 
 with tab_active:
@@ -144,13 +142,8 @@ with tab_active:
 with tab_mt:
     mutandard.render(fdf, df)
 
+with tab_churn:
+    st.info("'중저복귀' 탭은 추후 구현 예정입니다.")
+
 with tab_mb:
     mubaedan.render(fdf, df)
-
-for tab, name in [
-    (tab_churn,  "이탈고객"),
-    (tab_beauty, "뷰티"),
-    (tab_foot,   "풋웨어"),
-]:
-    with tab:
-        st.info(f"'{name}' 탭은 추후 구현 예정입니다.")
