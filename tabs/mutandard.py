@@ -4,11 +4,11 @@ import pandas as pd
 import streamlit as st
 
 from rd_loader import (
-    agg_kpi, delta_pct, delta_label, delta_status, get_prev_date,
+    agg_kpi, agg_kpi_active, delta_pct, delta_label, delta_status, get_prev_date,
     COL_DATE, COL_SEG, COL_DETAIL, COL_PART,
     PART_MUTANDARD, MERGED_DETAIL_SEGS, MERGED_LABELS,
 )
-from comment_generator import build_mutandard_comment, format_won, format_cpu
+from comment_generator import build_mutandard_comment, format_won, format_cpu, format_roas
 
 SEGMENT_ORDER = ['무탠다드맨', '무탠다드우먼', '무탠다드통합']
 SEGMENT_EMOJI = {'무탠다드맨': '🔵', '무탠다드우먼': '🔴', '무탠다드통합': '🟢'}
@@ -26,18 +26,21 @@ def _badge(pct: float | None) -> str:
 
 
 def _render_kpi_cards(kpi: dict, prev_kpi: dict | None):
-    c1, c2, c3, c4 = st.columns(4)
-    for col, label, key in [
-        (c1, '광고비',    '광고비'),
-        (c2, '활성CPU',   '활성CPU'),
-        (c3, '고활성CPU', '고활성CPU'),
-        (c4, '저활성CPU', '저활성CPU'),
-    ]:
+    row1 = st.columns(3)
+    row2 = st.columns(3)
+    metrics = [
+        (row1[0], '광고비',       '광고비',    format_won),
+        (row1[1], 'GMV 7D',       'GMV7D',     format_won),
+        (row1[2], 'GMV 7D ROAS',  'GMV ROAS',  format_roas),
+        (row2[0], '활성CPU',      '활성CPU',   format_cpu),
+        (row2[1], 'GGMV 1D',      'GGMV1D',    format_won),
+        (row2[2], 'GGMV 1D ROAS', 'GGMV ROAS', format_roas),
+    ]
+    for col, label, key, fmt in metrics:
         val  = kpi.get(key)
         prev = prev_kpi.get(key) if prev_kpi else None
         pct  = delta_pct(val, prev)
-        display = format_won(val) if key == '광고비' else format_cpu(val)
-        col.metric(label, display, delta_label(pct))
+        col.metric(label, fmt(val), delta_label(pct))
 
 
 def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
@@ -68,8 +71,8 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         unsafe_allow_html=True,
     )
 
-    day_kpi  = agg_kpi(day_df)
-    prev_kpi = agg_kpi(prev_df) if not prev_df.empty else None
+    day_kpi  = agg_kpi_active(day_df)
+    prev_kpi = agg_kpi_active(prev_df) if not prev_df.empty else None
     _render_kpi_cards(day_kpi, prev_kpi)
 
     st.markdown("**📂 세그먼트 × 상세구분 성과**")
