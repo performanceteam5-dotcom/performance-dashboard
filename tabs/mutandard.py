@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+from datetime import timedelta
 import pandas as pd
 import streamlit as st
 
@@ -49,16 +50,36 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
         st.info("무탠다드유입 데이터가 없습니다.")
         return
 
-    dates       = mt_df[COL_DATE].drop_duplicates().sort_values()
-    target_date = dates.max()
-    prev_date   = get_prev_date(dates, target_date)
+    target_date = mt_df[COL_DATE].max()
+    start_date  = mt_df[COL_DATE].min().date()
+    end_date    = target_date.date()
+    is_multiday = start_date != end_date
 
-    day_df  = mt_df[mt_df[COL_DATE] == target_date]
-    prev_df = mt_df[mt_df[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+    # 날짜 필터 미적용 원본
+    raw_mt = (raw_df if raw_df is not None else full_df)
+    raw_mt = raw_mt[raw_mt[COL_PART] == PART_MUTANDARD]
 
-    # 월 누적: 날짜 필터 미적용 원본 기준 당월 1일~target_date
-    base_df  = raw_df if raw_df is not None else full_df
-    raw_mt   = base_df[base_df[COL_PART] == PART_MUTANDARD]
+    if is_multiday:
+        period_days     = (end_date - start_date).days + 1
+        prev_end_date   = start_date - timedelta(days=1)
+        prev_start_date = prev_end_date - timedelta(days=period_days - 1)
+        day_df  = mt_df
+        prev_df = raw_mt[
+            (raw_mt[COL_DATE].dt.date >= prev_start_date) &
+            (raw_mt[COL_DATE].dt.date <= prev_end_date)
+        ]
+        header_text = (
+            f"📅 {start_date.strftime('%Y-%m-%d')} ~ {end_date.strftime('%Y-%m-%d')} "
+            f"합산 성과 (전{period_days}일 대비)"
+        )
+    else:
+        day_df    = mt_df[mt_df[COL_DATE] == target_date]
+        all_dates = raw_mt[COL_DATE].drop_duplicates().sort_values()
+        prev_date = get_prev_date(all_dates, target_date)
+        prev_df   = raw_mt[raw_mt[COL_DATE] == prev_date] if prev_date is not None else pd.DataFrame()
+        header_text = f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)"
+
+    # 월 누적: 당월 1일 ~ target_date
     month_df = raw_mt[
         (raw_mt[COL_DATE].dt.year  == target_date.year) &
         (raw_mt[COL_DATE].dt.month == target_date.month) &
@@ -66,8 +87,7 @@ def render(full_df: pd.DataFrame, raw_df: pd.DataFrame | None = None):
     ]
 
     st.markdown(
-        f"<div style='font-size:18px;font-weight:700;margin-bottom:16px'>"
-        f"📅 {target_date.strftime('%Y-%m-%d')} 기준 (전일 성과)</div>",
+        f"<div style='font-size:18px;font-weight:700;margin-bottom:16px'>{header_text}</div>",
         unsafe_allow_html=True,
     )
 
